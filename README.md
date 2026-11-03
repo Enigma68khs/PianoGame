@@ -38,6 +38,10 @@ Click **Start Game** (this click is what unlocks browser audio).
 
 > If `npm test` fails with *"Cannot find native binding"* (a known npm optional-dependency bug), run `rm -rf node_modules package-lock.json && npm install`.
 
+## Continuous integration
+
+`.github/workflows/ci.yml` runs on every push (any branch): `npm ci` → typecheck → 81 unit tests → production build → desktop keyboard E2E → emulated-phone touch E2E (Playwright's Chromium, installed in the job). **Only a push to `main` that passes all of it is built as a static site and deployed to GitHub Pages**; a failing run keeps the previous deployment and uploads the E2E screenshots and server log as an artifact (`e2e-debug`). Locally: `npm run verify` (typecheck + unit tests + build) and the two E2E commands above. Set `CHROME_PATH=` (empty) to force Playwright's bundled Chromium instead of your installed Chrome (`npx playwright-core install chromium` once).
+
 ## Controls
 
 | Key | Action |

@@ -1,0 +1,98 @@
+name: CI & Deploy
+
+# Every push (any branch) is verified. Only a push to main that passes verification is deployed to GitHub Pages.
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  # never cancel a run on main half-way through a deploy
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  verify:
+    name: Typecheck · unit tests · build · browser E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      - name: Install Chromium for the E2E tests
+        run: npx playwright-core install --with-deps chromium
+
+      - name: Start the production server
+        run: |
+          npx next start -p 3100 > server.log 2>&1 &
+          for i in $(seq 1 60); do
+            curl -sf http://localhost:3100 > /dev/null && exit 0
+            sleep 1
+          done
+          echo "server did not start" && cat server.log && exit 1
+      - name: E2E — desktop keyboard flow
+        run: npm run test:e2e
+        env:
+          BASE_URL: http://localhost:3100
+      - name: E2E — emulated phone with real touch events
+        run: npm run test:e2e:mobile
+        env:
+          BASE_URL: http://localhost:3100
+
+      - name: Keep screenshots and server log when something failed
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-debug
+          path: |
+            e2e/shots
+            server.log
+          if-no-files-found: ignore
+
+  pages:
+    name: Build the static site
+    needs: verify
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+        env:
+          GITHUB_PAGES: "true"
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: out
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: pages
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

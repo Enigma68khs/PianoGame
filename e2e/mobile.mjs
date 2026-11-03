@@ -1,11 +1,11 @@
 // Phone check: emulated iPhone 13 (portrait + landscape) with REAL touch input (Chrome DevTools Protocol touch events,
 // including two fingers at once) against a running server.
 //   BASE_URL=http://localhost:3000 node e2e/mobile.mjs
-import { chromium, devices } from "playwright-core";
+import { devices } from "playwright-core";
+import { launchBrowser } from "./browser.mjs";
 import { mkdirSync } from "node:fs";
 
 const BASE = process.env.BASE_URL ?? "http://localhost:3000";
-const CHROME = process.env.CHROME_PATH ?? "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 mkdirSync("e2e/shots", { recursive: true });
 
 let failed = 0;
@@ -14,7 +14,7 @@ const check = (name, ok, detail = "") => {
   console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail ? "  — " + detail : ""}`);
 };
 
-const browser = await chromium.launch({ executablePath: CHROME, headless: true, args: ["--autoplay-policy=no-user-gesture-required"] });
+const browser = await launchBrowser();
 const phone = devices["iPhone 13"];
 
 for (const [name, viewport] of [

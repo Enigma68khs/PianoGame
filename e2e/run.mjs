@@ -2,11 +2,10 @@
 //   npm run build && npx next start -p 3100 &   then   BASE_URL=http://localhost:3100 npm run test:e2e
 // An in-page autopilot presses keys at the notes' song times using synthetic KeyboardEvents, so the whole
 // pipeline (input → judge → piano synth → results) runs against the real AudioContext clock.
-import { chromium } from "playwright-core";
+import { launchBrowser } from "./browser.mjs";
 import { mkdirSync } from "node:fs";
 
 const BASE = process.env.BASE_URL ?? "http://localhost:3100";
-const CHROME = process.env.CHROME_PATH ?? "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 mkdirSync("e2e/shots", { recursive: true });
 
 const results = [];
@@ -15,11 +14,7 @@ const check = (name, ok, detail = "") => {
   console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail ? "  — " + detail : ""}`);
 };
 
-const browser = await chromium.launch({
-  executablePath: CHROME,
-  headless: true,
-  args: ["--autoplay-policy=no-user-gesture-required", "--use-fake-ui-for-media-stream"],
-});
+const browser = await launchBrowser();
 const page = await browser.newPage({ viewport: { width: 1600, height: 900 } });
 const errors = [];
 page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
@@ -242,8 +237,10 @@ await api(() => new Promise((resolve) => {
   f();
 }));
 await page.waitForTimeout(200);
-const cp = await api(() => window.__pianoGame.probe([]));
-check("Canon: correct key plays F#5 (MIDI 78)", cp.peakMidi === 78, `peak MIDI ${cp.peakMidi}`);
+// The ground bass (D3) sounds on the same beat, so compare the target pitch against its neighbouring semitones
+// instead of asking for the single loudest frequency.
+const cp = await api((fs) => window.__pianoGame.probe(fs), [midiHz(77), midiHz(78), midiHz(79)]);
+check("Canon: correct key plays F#5 (MIDI 78) — clearly louder than F5 and G5", cp.db[1] > Math.max(cp.db[0], cp.db[2]) + 8, `dB F5 ${cp.db[0].toFixed(0)} · F#5 ${cp.db[1].toFixed(0)} · G5 ${cp.db[2].toFixed(0)}`);
 await page.waitForTimeout(5000);
 await page.screenshot({ path: "e2e/shots/8-canon-playing.png" });
 
@@ -265,8 +262,8 @@ await api(() => new Promise((resolve) => {
   f();
 }));
 await page.waitForTimeout(200);
-const mp = await api(() => window.__pianoGame.probe([]));
-check("Moonlight: correct key plays G#3 (MIDI 56)", mp.peakMidi === 56 || mp.peakMidi === 44, `peak MIDI ${mp.peakMidi} (${mp.peakHz.toFixed(1)} Hz)`);
+const mp = await api((fs) => window.__pianoGame.probe(fs), [midiHz(55), midiHz(56), midiHz(57)]);
+check("Moonlight: correct key plays G#3 (MIDI 56) — clearly louder than G3 and A3", mp.db[1] > Math.max(mp.db[0], mp.db[2]) + 8, `dB G3 ${mp.db[0].toFixed(0)} · G#3 ${mp.db[1].toFixed(0)} · A3 ${mp.db[2].toFixed(0)}`);
 await page.waitForTimeout(4000);
 await page.screenshot({ path: "e2e/shots/9-moonlight-playing.png" });
 
