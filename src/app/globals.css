@@ -1,0 +1,154 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #07070f;
+  --panel: rgba(255, 255, 255, 0.045);
+  --panel-border: rgba(255, 255, 255, 0.1);
+  --accent: #a78bfa;
+  --gold: #fde68a;
+}
+
+@theme inline {
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif;
+  --color-lane-d: #38bdf8;
+  --color-lane-f: #a78bfa;
+  --color-lane-j: #f472b6;
+  --color-lane-k: #fbbf24;
+}
+
+html,
+body {
+  height: 100%;
+  background: var(--bg);
+  color: #ece9ff;
+  font-family: var(--font-sans);
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  backdrop-filter: blur(10px);
+  border-radius: 1rem;
+}
+
+.keycap {
+  display: inline-grid;
+  place-items: center;
+  min-width: 2.4rem;
+  height: 2.4rem;
+  padding: 0 0.6rem;
+  border-radius: 0.6rem;
+  font-weight: 800;
+  color: #1e1b4b;
+  background: linear-gradient(#fbfaff, #cfcaf0);
+  box-shadow: 0 3px 0 #7c72b8, 0 6px 12px rgba(0, 0, 0, 0.35);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #8b5cf6, #ec4899);
+  box-shadow: 0 10px 40px -8px rgba(139, 92, 246, 0.75);
+  transition: transform 0.15s, box-shadow 0.15s, filter 0.15s;
+}
+.btn-primary:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.1);
+}
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+.btn-ghost {
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  transition: background 0.15s, transform 0.15s;
+}
+.btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+input[type="range"] {
+  accent-color: #a78bfa;
+}
+
+@keyframes pop {
+  0% {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  35% {
+    transform: scale(1.15);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+@keyframes countdown {
+  0% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+  25% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.85);
+    opacity: 0;
+  }
+}
+@keyframes fade-up {
+  from {
+    transform: translateY(14px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+@keyframes combo-bump {
+  0% {
+    transform: scale(1.35);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes glow-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.animate-countdown {
+  animation: countdown 1s ease-out forwards;
+}
+.animate-pop {
+  animation: pop 0.5s cubic-bezier(0.2, 1.2, 0.4, 1) both;
+}
+.animate-fade-up {
+  animation: fade-up 0.5s ease-out both;
+}
+.animate-bump {
+  animation: combo-bump 0.18s ease-out;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+}
