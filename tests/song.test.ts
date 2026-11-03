@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { canonInD } from "@/songs/canonInD";
 import { furElise } from "@/songs/furElise";
+import { SONGS } from "@/songs";
 import { buildLaneSounds, buildSong, pitchFromName, pitchName, timeSong } from "@/songs/builder";
 import { HOLD_MIN_BEATS } from "@/engine/constants";
 
@@ -33,12 +35,8 @@ describe("wrong-note table", () => {
   });
 });
 
-describe("Für Elise chart", () => {
-  const notes = furElise.melody;
-
-  it("starts with the well-known motif E D# E D# E B D C A", () => {
-    expect(notes.slice(0, 9).map((n) => n.pitch)).toEqual([76, 75, 76, 75, 76, 71, 74, 72, 69]);
-  });
+describe.each(SONGS.map((song) => [song.title, song] as const))("chart integrity: %s", (_name, song) => {
+  const notes = song.melody;
 
   it("is sorted by time with unique ids and valid lanes", () => {
     expect(new Set(notes.map((n) => n.id)).size).toBe(notes.length);
@@ -50,16 +48,9 @@ describe("Für Elise chart", () => {
     }
   });
 
-  it("covers all tile types: normal, hold and chord", () => {
-    const types = new Set(notes.map((n) => n.type));
-    expect(types).toEqual(new Set(["normal", "hold", "chord"]));
-    for (const n of notes.filter((n) => n.type === "hold")) expect(n.durationBeats).toBeGreaterThanOrEqual(HOLD_MIN_BEATS);
-  });
-
   it("chord members share a time and use different lanes", () => {
     const groups = new Map<number, typeof notes>();
     for (const n of notes) if (n.chordGroup !== null) groups.set(n.chordGroup, [...(groups.get(n.chordGroup) ?? []), n]);
-    expect(groups.size).toBeGreaterThan(0);
     for (const g of groups.values()) {
       expect(g.length).toBeGreaterThan(1);
       expect(new Set(g.map((n) => n.startBeat)).size).toBe(1);
@@ -77,7 +68,7 @@ describe("Für Elise chart", () => {
   });
 
   it("accompaniment never duplicates a melody pitch sounding at the same time", () => {
-    for (const a of furElise.accompaniment) {
+    for (const a of song.accompaniment) {
       for (const m of notes) {
         const overlap = a.startBeat < m.startBeat + m.durationBeats && m.startBeat < a.startBeat + a.durationBeats;
         if (overlap) expect(a.pitch).not.toBe(m.pitch);
@@ -85,23 +76,73 @@ describe("Für Elise chart", () => {
     }
   });
 
-  it("lasts 30–60 s at Normal", () => {
-    const t = timeSong(furElise, "normal");
-    expect(t.endTime).toBeGreaterThanOrEqual(30);
-    expect(t.endTime).toBeLessThanOrEqual(60);
-  });
-
-  it("difficulty scales the tempo", () => {
-    const e = timeSong(furElise, "easy").endTime;
-    const n = timeSong(furElise, "normal").endTime;
-    const h = timeSong(furElise, "hard").endTime;
+  it("lasts 30–60 s at Normal and scales with difficulty", () => {
+    const e = timeSong(song, "easy").endTime;
+    const n = timeSong(song, "normal").endTime;
+    const h = timeSong(song, "hard").endTime;
+    expect(n).toBeGreaterThanOrEqual(30);
+    expect(n).toBeLessThanOrEqual(60);
     expect(e).toBeGreaterThan(n);
     expect(n).toBeGreaterThan(h);
   });
 
-  it("is honest about its provenance", () => {
-    expect(furElise.coverage.toLowerCase()).toContain("not the complete piece");
-    expect(furElise.source.toLowerCase()).toContain("hand transcription");
+  it("has Hold tiles consistent with the chart, and is honest about its provenance", () => {
+    for (const n of notes) expect(n.hold).toBe(n.type === "hold" || (n.type === "chord" && n.hold));
+    expect(song.coverage.toLowerCase()).toContain("not the complete piece");
+    expect(song.source.toLowerCase()).toContain("hand transcription");
+  });
+});
+
+describe("Für Elise chart", () => {
+  const notes = furElise.melody;
+
+  it("starts with the well-known motif E D# E D# E B D C A", () => {
+    expect(notes.slice(0, 9).map((n) => n.pitch)).toEqual([76, 75, 76, 75, 76, 71, 74, 72, 69]);
+  });
+
+  it("covers all tile types: normal, hold and chord", () => {
+    expect(new Set(notes.map((n) => n.type))).toEqual(new Set(["normal", "hold", "chord"]));
+    for (const n of notes.filter((n) => n.type === "hold")) expect(n.durationBeats).toBeGreaterThanOrEqual(HOLD_MIN_BEATS);
+  });
+});
+
+describe("Canon in D chart", () => {
+  const notes = canonInD.melody;
+  const names = (from: number, to: number) => notes.slice(from, to).map((n) => pitchName(n.pitch));
+
+  it("variation 1 is the stepwise theme F# E D C# B A B C# in half notes", () => {
+    expect(names(0, 8)).toEqual(["F#5", "E5", "D5", "C#5", "B4", "A4", "B4", "C#5"]);
+    expect(notes.slice(0, 8).every((n) => n.durationBeats === 2)).toBe(true);
+  });
+
+  it("variation 2 is the quarter-note line over the same bass", () => {
+    expect(names(8, 24)).toEqual(
+      ["D5", "F#5", "A5", "G5", "F#5", "D5", "F#5", "E5", "D5", "B4", "D5", "A4", "G4", "B4", "A4", "G4"],
+    );
+    expect(notes.slice(8, 24).every((n) => n.durationBeats === 1)).toBe(true);
+  });
+
+  it("the ground bass is D A B F# G D G A, one note per half-bar, in both cycles", () => {
+    const bass = canonInD.accompaniment.filter((a) => a.durationBeats === 2);
+    expect(bass.map((a) => pitchName(a.pitch)).slice(0, 8)).toEqual(["D3", "A2", "B2", "F#2", "G2", "D3", "G2", "A2"]);
+    expect(bass.slice(0, 8).map((a) => a.startBeat)).toEqual([0, 2, 4, 6, 8, 10, 12, 14]);
+    expect(bass.slice(8, 16).map((a) => a.startBeat)).toEqual([16, 18, 20, 22, 24, 26, 28, 30]);
+  });
+
+  it("a given pitch always sits on the same lane", () => {
+    const lane = new Map<number, number>();
+    for (const n of notes) {
+      if (n.chordGroup !== null) continue;
+      expect(lane.get(n.pitch) ?? n.lane).toBe(n.lane);
+      lane.set(n.pitch, n.lane);
+    }
+  });
+
+  it("ends on a held 3-key D-major chord; everything before it is a tap", () => {
+    const chord = notes.filter((n) => n.chordGroup !== null);
+    expect(chord.map((n) => pitchName(n.pitch)).sort()).toEqual(["A5", "D5", "F#5"]);
+    expect(chord.every((n) => n.hold && n.durationBeats === 4)).toBe(true);
+    expect(notes.filter((n) => n.chordGroup === null).some((n) => n.hold)).toBe(false);
   });
 });
 

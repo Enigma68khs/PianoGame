@@ -9,7 +9,8 @@
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:e2e": "node e2e/run.mjs"
+    "test:e2e": "node e2e/run.mjs",
+    "test:e2e:mobile": "node e2e/mobile.mjs"
   },
   "dependencies": {
     "next": "^16.4.4",

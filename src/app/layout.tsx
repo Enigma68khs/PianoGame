@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   description: "A four-lane piano rhythm game where every key you press plays a real piano note — right or wrong.",
 };
 
-export const viewport: Viewport = { themeColor: "#07070f", width: "device-width", initialScale: 1 };
+export const viewport: Viewport = { themeColor: "#07070f", width: "device-width", initialScale: 1, viewportFit: "cover" };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

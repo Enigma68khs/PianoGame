@@ -3,7 +3,7 @@ import { JUDGE } from "@/engine/constants";
 import { PlaySession } from "@/engine/session";
 import { computeStats } from "@/engine/stats";
 import { pitchFromName, timeSong } from "@/songs/builder";
-import { furElise } from "@/songs/furElise";
+import { SONGS } from "@/songs";
 import { makeSession, noteOns } from "./helpers";
 import type { SoundCommand } from "@/engine/types";
 
@@ -195,8 +195,8 @@ describe("hold notes", () => {
   });
 });
 
-describe("full-song simulations", () => {
-  const song = timeSong(furElise, "normal");
+describe.each(SONGS.map((d) => [d.title, d] as const))("full-song simulations: %s", (_title, data) => {
+  const song = timeSong(data, "normal");
 
   it("perfect play: every note Perfect, sounds are exactly the melody, in order", () => {
     const s = new PlaySession(song);

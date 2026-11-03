@@ -149,7 +149,7 @@ await api(() => {
   const g = window.__pianoGame;
   const notes = g.getNotes();
   const plan = notes.map((n, i) => ({ n, mode: i % 17 === 5 ? "wrong" : i % 11 === 8 && n.chordGroup === null ? "skip" : "ok" }));
-  window.__plan = plan.map((p) => ({ id: p.n.id, mode: p.mode, lane: p.n.lane, time: p.n.time, dur: p.n.duration, hold: p.n.durationBeats >= 0.75, chord: p.n.chordGroup !== null }));
+  window.__plan = plan.map((p) => ({ id: p.n.id, mode: p.mode, lane: p.n.lane, time: p.n.time, dur: p.n.duration, hold: p.n.hold, chord: p.n.chordGroup !== null }));
   const codes = g.lanes;
   let idx = 0;
   const releases = [];
@@ -161,7 +161,7 @@ await api(() => {
       const lane = p.mode === "wrong" ? (p.n.lane + 1) % 4 : p.n.lane;
       const code = codes[lane];
       window.dispatchEvent(new KeyboardEvent("keydown", { code, bubbles: true }));
-      releases.push({ at: t + (p.n.durationBeats >= 0.75 && p.mode === "ok" ? p.n.duration - 0.1 : 0.07), code });
+      releases.push({ at: t + (p.n.hold && p.mode === "ok" ? p.n.duration - 0.1 : 0.07), code });
     }
     for (let i = releases.length - 1; i >= 0; i--) {
       if (t >= releases[i].at) {
@@ -224,6 +224,28 @@ check("Play Again starts a fresh run (READY)", (await api(() => window.__pianoGa
 await page.reload();
 await page.waitForSelector("text=Start Game");
 check("page reload returns to a working menu", true);
+
+// ── 8. second song: Canon in D ─────────────────────────────────────────────────────────────
+await page.screenshot({ path: "e2e/shots/7-menu-two-songs.png" });
+check("menu lists Canon in D as playable", (await page.getByRole("button", { name: /Canon in D/ }).isEnabled()));
+await page.getByRole("button", { name: /Canon in D/ }).click();
+await page.getByRole("radio", { name: /Normal/ }).click();
+await page.keyboard.press("Space");
+await page.waitForFunction(() => window.__pianoGame?.getState() === "READY");
+const canon = await api(() => { const n = window.__pianoGame.getNotes(); return { count: n.length, first: n[0].pitch, lane: n[0].lane, holds: n.filter((x) => x.hold).length, chord: n.filter((x) => x.chordGroup !== null).length }; });
+check("Canon loads: first note F#5 (78) on lane 2, only the closing 3-key chord is a hold", canon.first === 78 && canon.lane === 2 && canon.holds === 3 && canon.chord === 3, JSON.stringify(canon));
+await api(() => window.__pianoGame.probeStart());
+await waitState("PLAYING");
+await api(() => new Promise((resolve) => {
+  const g = window.__pianoGame;
+  const f = () => { if (g.getSongTime() >= -0.005) { window.dispatchEvent(new KeyboardEvent("keydown", { code: "KeyK", bubbles: true })); resolve(); } else requestAnimationFrame(f); };
+  f();
+}));
+await page.waitForTimeout(200);
+const cp = await api(() => window.__pianoGame.probe([]));
+check("Canon: correct key plays F#5 (MIDI 78)", cp.peakMidi === 78, `peak MIDI ${cp.peakMidi}`);
+await page.waitForTimeout(5000);
+await page.screenshot({ path: "e2e/shots/8-canon-playing.png" });
 
 check("no console/page errors", errors.length === 0, errors.slice(0, 3).join(" | "));
 await browser.close();

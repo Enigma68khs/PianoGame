@@ -81,6 +81,8 @@ export class GameController {
   private stats: Stats = emptyStats();
   private disposers: (() => void)[] = [];
   private analyser: AnalyserNode | null = null;
+  /** pointerId → lane for every finger / mouse button currently held on the playfield. */
+  private touchLanes = new Map<number, LaneIndex>();
   private readonly pulsePeriod: number;
 
   private constructor(
@@ -159,7 +161,8 @@ export class GameController {
   pause() {
     if (this.state !== "PLAYING" && this.state !== "READY") return;
     if (this.state === "PLAYING") {
-      // lift every held key first so holds end cleanly at the pause position
+      // lift every held key / finger first so holds end cleanly at the pause position
+      this.releaseAllTouches(true);
       this.input.reset(true);
       this.clock.pause();
     }
@@ -198,6 +201,7 @@ export class GameController {
     this.scheduler.stop();
     this.synth.stopAll();
     this.input.reset(false);
+    this.releaseAllTouches(false);
     this.laneDown.fill(false);
     this.clock.pause();
     this.clock.reset(-FALL_TIME);
@@ -214,6 +218,7 @@ export class GameController {
     this.scheduler.stop();
     this.clock.pause();
     this.input.reset(false);
+    this.releaseAllTouches(false);
     this.emit(true);
     this.opts.onComplete({
       songId: this.opts.song.id,
@@ -236,6 +241,7 @@ export class GameController {
     };
     const ku = (e: KeyboardEvent) => this.input.keyup(e);
     const blur = () => {
+      this.releaseAllTouches(true);
       this.input.reset(true);
       this.laneDown.fill(false);
       if (this.state === "PLAYING" || this.state === "READY") this.pause();
@@ -243,16 +249,64 @@ export class GameController {
     const vis = () => {
       if (document.hidden) blur();
     };
+    // Touch / mouse: press anywhere in a lane column. Pointer capture keeps the release attached to this
+    // canvas, every finger is tracked by its pointerId (multi-touch chords), and holding = keeping the finger down.
+    const canvas = this.opts.canvas;
+    const pd = (e: PointerEvent) => {
+      const lane = this.laneAtClientX(e.clientX);
+      if (lane === null) return;
+      e.preventDefault();
+      try {
+        canvas.setPointerCapture(e.pointerId);
+      } catch {
+        /* synthetic pointers can't be captured */
+      }
+      const alreadyDown = this.input.isDown(lane) || [...this.touchLanes.values()].includes(lane);
+      this.touchLanes.set(e.pointerId, lane);
+      if (!alreadyDown) this.laneDownEvent(lane);
+    };
+    const pu = (e: PointerEvent) => {
+      const lane = this.touchLanes.get(e.pointerId);
+      if (lane === undefined) return;
+      e.preventDefault();
+      this.touchLanes.delete(e.pointerId);
+      const stillDown = this.input.isDown(lane) || [...this.touchLanes.values()].includes(lane);
+      if (!stillDown) this.laneUpEvent(lane);
+    };
+    const noMenu = (e: Event) => e.preventDefault();
+    canvas.addEventListener("pointerdown", pd);
+    canvas.addEventListener("pointerup", pu);
+    canvas.addEventListener("pointercancel", pu);
+    canvas.addEventListener("contextmenu", noMenu);
     window.addEventListener("keydown", kd, { capture: true });
     window.addEventListener("keyup", ku, { capture: true });
     window.addEventListener("blur", blur);
     document.addEventListener("visibilitychange", vis);
     this.disposers.push(() => {
+      canvas.removeEventListener("pointerdown", pd);
+      canvas.removeEventListener("pointerup", pu);
+      canvas.removeEventListener("pointercancel", pu);
+      canvas.removeEventListener("contextmenu", noMenu);
       window.removeEventListener("keydown", kd, { capture: true });
       window.removeEventListener("keyup", ku, { capture: true });
       window.removeEventListener("blur", blur);
       document.removeEventListener("visibilitychange", vis);
     });
+  }
+
+  /** Lane under a horizontal screen position, or null outside the playfield. */
+  private laneAtClientX(clientX: number): LaneIndex | null {
+    const L = this.renderer.getLayout();
+    const rel = clientX - this.opts.canvas.getBoundingClientRect().left - L.fieldX;
+    if (rel < 0 || rel >= L.fieldW) return null;
+    return Math.min(LANE_COUNT - 1, Math.floor(rel / L.laneW)) as LaneIndex;
+  }
+
+  /** Lift every finger (optionally reporting the releases so holds end at this moment). */
+  private releaseAllTouches(notify: boolean) {
+    const held = [...new Set(this.touchLanes.values())];
+    this.touchLanes.clear();
+    if (notify) for (const lane of held) if (!this.input.isDown(lane)) this.laneUpEvent(lane);
   }
 
   private command(cmd: GameCommand) {

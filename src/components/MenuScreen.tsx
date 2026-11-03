@@ -86,8 +86,8 @@ export default function MenuScreen({ songId, onSong, difficulty, onDifficulty, v
   const timed = song ? timeSong(song, difficulty) : null;
 
   return (
-    <main className="relative h-screen w-screen overflow-y-auto bg-[radial-gradient(ellipse_at_20%_0%,#2a1766_0%,#0c0a1c_45%,#07070f_100%)]">
-      <div className="mx-auto flex min-h-full max-w-6xl flex-col gap-8 px-8 py-10">
+    <main className="relative h-[100dvh] w-screen overflow-y-auto bg-[radial-gradient(ellipse_at_20%_0%,#2a1766_0%,#0c0a1c_45%,#07070f_100%)]">
+      <div className="mx-auto flex min-h-full max-w-6xl flex-col gap-6 px-4 py-6 max-lg:pb-28 sm:gap-8 sm:px-8 sm:py-10">
         <header className="flex items-center justify-between">
           <Logo />
           <p className="hidden text-sm text-violet-200/60 md:block">
@@ -99,7 +99,7 @@ export default function MenuScreen({ songId, onSong, difficulty, onDifficulty, v
           {/* songs */}
           <div className="flex flex-col gap-4">
             <h2 className="text-xs font-bold uppercase tracking-[0.25em] text-violet-300/70">Select Song · 곡 선택</h2>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4">
               {CATALOG.map((c) => {
                 const selected = c.id === songId && c.available;
                 return (
@@ -108,13 +108,13 @@ export default function MenuScreen({ songId, onSong, difficulty, onDifficulty, v
                     disabled={!c.available}
                     onClick={() => c.available && onSong(c.id)}
                     className={[
-                      "panel group relative overflow-hidden p-5 text-left transition",
+                      "panel group relative overflow-hidden p-3 text-left transition sm:p-5",
                       c.available ? "hover:-translate-y-1 hover:border-violet-300/50" : "cursor-not-allowed opacity-45",
                       selected ? "!border-violet-300 ring-2 ring-violet-400/60 shadow-[0_0_50px_-10px_rgba(167,139,250,0.9)]" : "",
                     ].join(" ")}
                     aria-pressed={selected}
                   >
-                    <div className="mb-8 flex items-end gap-1" aria-hidden>
+                    <div className="mb-4 flex items-end gap-1 sm:mb-8" aria-hidden>
                       {[14, 26, 18, 34, 22, 40, 16, 28].map((h, i) => (
                         <span
                           key={i}
@@ -127,11 +127,11 @@ export default function MenuScreen({ songId, onSong, difficulty, onDifficulty, v
                         />
                       ))}
                     </div>
-                    <div className="text-xl font-extrabold">{c.title}</div>
-                    <div className="text-sm text-violet-200/70">{c.composer}</div>
+                    <div className="text-base font-extrabold sm:text-xl">{c.title}</div>
+                    <div className="text-xs text-violet-200/70 sm:text-sm">{c.composer}</div>
                     <span
                       className={[
-                        "absolute right-4 top-4 rounded-full px-3 py-1 text-[11px] font-bold tracking-wide",
+                        "absolute right-2 top-2 rounded-full px-2 py-0.5 text-[9px] font-bold tracking-wide sm:right-4 sm:top-4 sm:px-3 sm:py-1 sm:text-[11px]",
                         c.available ? "bg-violet-500/30 text-violet-100" : "bg-white/10 text-slate-300",
                       ].join(" ")}
                     >
@@ -185,11 +185,14 @@ export default function MenuScreen({ songId, onSong, difficulty, onDifficulty, v
                   </div>
                 ))}
               </div>
-              <ul className="mt-4 grid grid-cols-3 gap-2 text-center text-[11px] text-violet-100/75">
+              <ul className="mt-4 grid grid-cols-3 gap-2 text-center text-[11px] text-violet-100/75 pointer-coarse:hidden">
                 <li><span className="keycap !h-7 !min-w-0 !text-xs">Space</span><br />시작 / 일시정지</li>
                 <li><span className="keycap !h-7 !min-w-0 !text-xs">Esc</span><br />일시정지 메뉴</li>
                 <li><span className="keycap !h-7 !min-w-0 !text-xs">R</span><br />재시작(확인)</li>
               </ul>
+              <p className="mt-3 hidden text-xs leading-relaxed text-violet-100/80 pointer-coarse:block">
+                📱 <b>화면의 4개 레인을 손가락으로 터치</b>해서 연주하세요. 여러 손가락으로 동시에 누를 수 있고, 긴 타일은 손가락을 떼지 않고 누르고 있으면 돼요. <b>가로 모드</b>를 권장합니다.
+              </p>
               <p className="mt-3 text-xs leading-relaxed text-violet-200/65">
                 맞는 키 → 원곡의 음 · 틀린 키 → <b className="text-rose-300">다른 음</b> · 놓친 음 → <b className="text-slate-300">소리 없음</b>. 두 손으로 여러 키를 동시에 누를 수 있어요.
               </p>
@@ -213,13 +216,15 @@ export default function MenuScreen({ songId, onSong, difficulty, onDifficulty, v
               </label>
             </div>
 
+            <div className="mt-auto max-lg:fixed max-lg:inset-x-0 max-lg:bottom-0 max-lg:z-30 max-lg:bg-gradient-to-t max-lg:from-[#07070f] max-lg:via-[#07070f]/90 max-lg:to-transparent max-lg:px-4 max-lg:pb-[max(1rem,env(safe-area-inset-bottom))] max-lg:pt-6">
             <button
               onClick={begin}
               disabled={starting}
-              className="btn-primary mt-auto rounded-2xl px-8 py-5 text-2xl font-black tracking-wide text-white disabled:opacity-60"
+              className="btn-primary w-full rounded-2xl px-8 py-4 text-xl font-black tracking-wide text-white disabled:opacity-60 sm:py-5 sm:text-2xl"
             >
-              {starting ? "Loading…" : <>▶  Start Game <span className="text-sm font-semibold opacity-70">(Space)</span></>}
+              {starting ? "Loading…" : <>▶  Start Game <span className="text-sm font-semibold opacity-70 pointer-coarse:hidden">(Space)</span></>}
             </button>
+            </div>
           </div>
         </section>
       </div>

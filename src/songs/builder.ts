@@ -43,6 +43,8 @@ export interface ChartDef {
   bpm: number;
   /** One beat = a quarter note; chart authored in `unit`-beat steps (0.25 = sixteenth). */
   unit: number;
+  /** Notes at least this long (beats) become Hold tiles. Defaults to HOLD_MIN_BEATS. */
+  holdMinBeats?: number;
   /**
    * Melody tokens, in order:
    *   "E5:2:3"        pitch : length(units) : lane(0-3)
@@ -78,7 +80,8 @@ export function buildSong(def: ChartDef): SongData {
     pitches.forEach((pitch, i) => {
       const lane = lanes[i] as LaneIndex;
       if (lane < 0 || lane >= LANE_COUNT) throw new Error(`Lane out of range in ${token}`);
-      const type: NoteType = isChord ? "chord" : durationBeats >= HOLD_MIN_BEATS ? "hold" : "normal";
+      const hold = durationBeats >= (def.holdMinBeats ?? HOLD_MIN_BEATS);
+      const type: NoteType = isChord ? "chord" : hold ? "hold" : "normal";
       melody.push({
         id: id++,
         pitch,
@@ -86,6 +89,7 @@ export function buildSong(def: ChartDef): SongData {
         durationBeats,
         lane,
         type,
+        hold,
         chordGroup: group,
         velocity: 0.82,
         laneSounds: buildLaneSounds(pitch, lane),
@@ -135,7 +139,7 @@ export function timeSong(data: SongData, difficulty: Difficulty): TimedSong {
   return { data, difficulty, notes, accompaniment, endTime };
 }
 
-/** A note is a Hold tile when it is at least HOLD_MIN_BEATS long (chord members included). */
-export function isHold(note: { durationBeats: number }): boolean {
-  return note.durationBeats >= HOLD_MIN_BEATS;
+/** A note is a Hold tile when the chart marked it long enough (chord members included). */
+export function isHold(note: { hold: boolean }): boolean {
+  return note.hold;
 }

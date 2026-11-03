@@ -1,6 +1,6 @@
 # PianoGame — MVP v0.1
 
-A desktop-browser piano rhythm game. Four tile lanes (**A S K L**) fall in time with the music, and **every key you press plays a real piano note**:
+A browser piano rhythm game (keyboard on desktop, touch on phones). Four tile lanes (**A S K L**) fall in time with the music, and **every key you press plays a real piano note**:
 
 | You do | You hear |
 |---|---|
@@ -10,7 +10,7 @@ A desktop-browser piano rhythm game. Four tile lanes (**A S K L**) fall in time 
 
 The game never stops for mistakes; when the song ends you get a result screen with accuracy and a full note-by-note log.
 
-> **Music data caveat (please read):** the Für Elise chart is a *hand transcription* of the right-hand melody made for this project. It has **not** been proof-read against an Urtext/Henle/IMSLP edition. See [Music data provenance](#music-data-provenance).
+> **Music data caveat (please read):** the Für Elise and Canon in D charts are *hand transcriptions* made for this project. It has **not** been proof-read against an Urtext/Henle/IMSLP edition. See [Music data provenance](#music-data-provenance).
 
 ## Run it
 
@@ -27,10 +27,11 @@ Checks:
 
 ```bash
 npm run typecheck    # tsc --noEmit
-npm test             # 52 unit tests (vitest)
+npm test             # 65 unit tests (vitest)
 # browser end-to-end (real Chrome, real AudioContext). Needs Google Chrome installed (set CHROME_PATH otherwise):
 npm run build && npx next start -p 3100 &
-BASE_URL=http://localhost:3100 npm run test:e2e
+BASE_URL=http://localhost:3100 npm run test:e2e          # desktop keyboard flow
+BASE_URL=http://localhost:3100 npm run test:e2e:mobile   # emulated iPhone, real multi-touch (use a production build: the dev overlay covers a button)
 ```
 
 Click **Start Game** (this click is what unlocks browser audio).
@@ -47,6 +48,10 @@ Click **Start Game** (this click is what unlocks browser audio).
 | `R` | restart — asks for confirmation (`Enter` = yes, `Esc` = no) |
 
 Several keys can be held at once (chords). Holding a key does not auto-repeat. The window losing focus pauses the game.
+
+### Phones / tablets (touch)
+
+Touch the lane columns (or the A S K L pads) with your fingers: every finger is its own input, so chords work with several fingers, and a Hold tile is played by keeping the finger down. Landscape is recommended; portrait works too. The menu's Start button stays fixed at the bottom, the HUD compacts on small screens, and iOS Safari is switched to the "playback" audio session so the piano is audible even with the silent switch on (iOS 16.4+). The fullscreen button is hidden where the browser has no page-fullscreen (iPhone Safari). The same touch/mouse input also works with a mouse on desktop.
 
 ## Features implemented
 
@@ -84,8 +89,9 @@ src/
     audioEngine.ts      lazy AudioContext singleton
   songs/
     builder.ts          chart DSL → SongData, beats → seconds per difficulty, wrong-note tables
-    furElise.ts         the chart (data only)
-    index.ts            catalog (Für Elise playable, others "Coming Soon")
+    furElise.ts         chart: Für Elise (data only)
+    canonInD.ts         chart: Canon in D (data only)
+    index.ts            catalog (Für Elise and Canon in D playable, others "Coming Soon")
   lib/storage.ts        localStorage wrapper
 tests/                  vitest unit tests
 e2e/run.mjs             Chrome end-to-end script (playwright-core)
@@ -96,11 +102,20 @@ Adding a song = adding one data file next to `furElise.ts` (melody tokens `pitch
 ## Music data provenance
 
 - **Composition:** Ludwig van Beethoven, *Für Elise* (Bagatelle in A minor, WoO 59) — public domain.
-- **Chart:** hand-transcribed by the author of this code from the public-domain right-hand melody. **No third-party MIDI file, engraving or sample was downloaded or used.**
+- **Chart (Für Elise):** hand-transcribed by the author of this code from the public-domain right-hand melody. **No third-party MIDI file, engraving or sample was downloaded or used.**
 - **Not verified:** I could not check the transcription against a printed or Urtext score in this environment. The opening motif (E D♯ E D♯ E B D C A, the A–C–E–A–B / E–G♯–B–C arpeggio figures and their second ending) is the well-known one and is covered by a test, but bar-by-bar correctness has **not** been confirmed. Please proof-read `src/songs/furElise.ts` against a Henle/Peters/IMSLP score before calling it "the" arrangement.
 - **What it is:** an *excerpt arrangement* (~45 s at Normal): opening theme (bars 1–8), the second episode (E–G–F–E / D–F–E–D / C–E–D–C), a return of the theme, and a closing A-minor dyad. It is **not** the complete piece. The two short "link" bars (12, 20) that join the sections, and the bass under the second episode, are simplified/added for gameplay. The tempo is slowed (♩ = 50) so four keys can play it; Easy ×0.75, Hard ×1.25.
 - **Lanes** are hand-assigned along the melodic contour (higher pitch → higher lane); they are part of the data, not computed at runtime.
 - **Sound:** synthesized in the browser; no external audio files.
+
+### Canon in D
+
+- **Composition:** Johann Pachelbel (1653–1706) — public domain. Chart: `src/songs/canonInD.ts`, hand-transcribed; no third-party MIDI/score/sample used.
+- **What it is:** an *excerpt arrangement* (~31 s at Normal, ♩ = 70): the eight-note ground bass **D A B F♯ G D G A** (one note per half-bar) under the top line's **variation 1** (stepwise half notes F♯ E D C♯ B A B C♯) and **variation 2** (quarter notes D F♯ A G · F♯ D F♯ E · D B D A · G B A G), closing on a held 3-key D-major chord. The canonic entries of the other voices and the later eighth-note variations are **not** included, so it is **not the complete piece**.
+- **Verification level:** the ground-bass pattern and the opening descending theme were cross-checked against one beginner tutorial (it lists the same shapes transposed to C major). The rest is from memory and has **not** been proof-read against a score. Treat it as unverified until you do.
+- **Fixed pitch→lane table** (a pitch always sits on the same key): G4 A4 → A · B4 C♯5 D5 → S · E5 F♯5 → K · G5 A5 → L. Only the closing chord is a Hold (`holdMinBeats: 4` in the chart; Für Elise uses the default 0.75).
+- **Accompaniment:** the ground bass plus a quiet broken chord, all below G4 (a test checks it never duplicates a melody pitch).
+- Each song has its own animated background (Für Elise: moonlit hall; Canon in D: sunrise hall) — `src/engine/backgrounds.ts`.
 
 ## Test results
 
@@ -108,8 +123,9 @@ Adding a song = adding one data file next to `furElise.ts` (melody tokens `pitch
 |---|---|
 | `npm run typecheck` | pass |
 | `npm run build` | pass |
-| `npm test` (52 unit tests: judging windows, wrong-note mapping, no auto-correction, misses are silent, chords, holds, full-song simulations — perfect / all-wrong / silent —, clock pause/resume, key-repeat, simultaneous keys, stats, song-data integrity) | 52 / 52 pass |
-| `npm run test:e2e` (real Chrome 34 checks) | 34 / 34 pass |
+| `npm test` (65 unit tests: judging windows, wrong-note mapping, no auto-correction, misses are silent, chords, holds, full-song simulations for every song — perfect / all-wrong / silent —, clock pause/resume, key-repeat, simultaneous keys, stats, chart integrity and Canon-specific checks) | 65 / 65 pass |
+| `npm run test:e2e` (real Chrome, 38 checks) | 38 / 38 pass |
+| `npm run test:e2e:mobile` (emulated iPhone 13, portrait + landscape, real CDP touch incl. two fingers at once: layout, touch hit with correct pitch, multi-touch, pause/resume by tap, results screen) | 28 / 28 pass |
 
 What the E2E run verifies in a real browser: menu renders; `AudioContext` is running after Start; countdown; Space/Esc pause freezes song time (±1 ms) and resume continues from the same position; `R` asks for confirmation, Esc cancels, Enter restarts with a cleared log; key auto-repeat produces one input; **measured on the synth output with an `AnalyserNode`: the correct key makes E5 (659 Hz) the loudest pitch, the wrong key makes D♯5 sound while E5 stays absent afterwards, and an unplayed note is silent**; a scripted autopilot plays the whole song with deliberate wrong keys and skipped notes (game keeps running, counts match the plan, mean input error 6 ms), the results screen and log appear, replay starts, Play Again works, reload returns to a working menu; no console errors.
 
@@ -117,6 +133,7 @@ What the E2E run verifies in a real browser: menu renders; `AudioContext` is run
 
 - **How it sounds.** Pitch and silence were measured, but I could not listen to the timbre. The synthesizer is a plausible piano approximation, not a sampled piano.
 - **Perceived audio/visual sync and latency on your hardware.** The logic uses one clock, but speaker/Bluetooth output latency and screen latency vary; `JUDGE.INPUT_OFFSET` in `constants.ts` is the calibration knob (default 0).
+- **Real phones.** Touch was verified on an emulated iPhone in Chrome, not on real iOS Safari / Android devices (touch latency, the iOS silent-switch behaviour, multi-touch limits, notches and browser toolbars).
 - **Real keyboard feel** (ghosting on cheap keyboards when holding 3+ keys, IME behaviour with a physical Korean layout). Tests use synthetic `KeyboardEvent`s with the same `code`s.
 - Edge, Firefox, Safari (only Chrome was run). Fullscreen button (relies on a user gesture; not exercised headlessly).
 - Whether the chart matches the printed score (see above).
@@ -124,11 +141,11 @@ What the E2E run verifies in a real browser: menu renders; `AudioContext` is run
 ## Not implemented / known limitations
 
 - Chart not proof-read against an Urtext; only an excerpt of the piece; tempo slowed.
-- Only one playable song (others are "Coming Soon" cards).
+- Two playable excerpts (others are "Coming Soon" cards).
 - Piano is synthesized, not sampled; no sustain pedal, no velocity layers.
 - A Hold that is still held when you pause is treated as released at the pause position.
 - Keys pressed when nothing is due (including during the lead-in before the first tile) count as stray Wrong Notes by design.
-- No latency calibration screen; no mobile/touch controls (out of scope); no accounts, ranking or backend (out of scope).
+- No latency calibration screen; touch controls are tested only on an emulated phone (see below); no accounts, ranking or backend (out of scope).
 
 ## Ideas for next versions
 

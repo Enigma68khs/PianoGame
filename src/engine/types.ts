@@ -13,6 +13,8 @@ export interface SongNote {
   durationBeats: number;
   lane: LaneIndex;
   type: NoteType;
+  /** Hold tile: the key must stay down for the note's length (chord members can be holds too). */
+  hold: boolean;
   /** Notes sharing a chordGroup must be played together. null = not part of a chord. */
   chordGroup: number | null;
   velocity: number;

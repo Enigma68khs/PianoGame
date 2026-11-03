@@ -126,19 +126,19 @@ export default function ResultsScreen({ run, onPlayAgain, onMenu }: { run: RunSu
   };
 
   return (
-    <main className="h-screen w-screen overflow-y-auto bg-[radial-gradient(ellipse_at_50%_-10%,#3b1d8f_0%,#0c0a1c_50%,#07070f_100%)]">
-      <div className="mx-auto flex max-w-6xl flex-col gap-6 px-8 py-10">
+    <main className="h-[100dvh] w-screen overflow-y-auto bg-[radial-gradient(ellipse_at_50%_-10%,#3b1d8f_0%,#0c0a1c_50%,#07070f_100%)]">
+      <div className="mx-auto flex max-w-6xl flex-col gap-5 px-4 py-6 sm:gap-6 sm:px-8 sm:py-10">
         <header className="animate-fade-up text-center">
           <p className="text-xs font-bold uppercase tracking-[0.4em] text-violet-300/70">Performance Complete · 공연 완료</p>
-          <h1 className="mt-2 text-4xl font-black">{result.title}</h1>
+          <h1 className="mt-2 text-3xl font-black sm:text-4xl">{result.title}</h1>
           <p className="text-sm text-violet-200/60">
             {result.composer} · {result.difficulty.toUpperCase()}
           </p>
         </header>
 
-        <section className="grid gap-6 lg:grid-cols-[18rem_1fr]">
+        <section className="grid gap-4 sm:gap-6 lg:grid-cols-[18rem_1fr]">
           <div className="panel animate-pop flex flex-col items-center justify-center gap-3 p-6 text-center">
-            <div className={`bg-gradient-to-b ${GRADE_COLOR[grade]} bg-clip-text text-[8rem] font-black leading-none text-transparent drop-shadow-[0_0_30px_rgba(253,230,138,0.35)]`} aria-label={`Grade ${grade}`}>
+            <div className={`bg-gradient-to-b ${GRADE_COLOR[grade]} bg-clip-text text-[6rem] font-black leading-none text-transparent sm:text-[8rem] drop-shadow-[0_0_30px_rgba(253,230,138,0.35)]`} aria-label={`Grade ${grade}`}>
               {grade}
             </div>
             <p className="text-sm text-violet-100/80">{GRADE_TEXT[grade]}</p>
@@ -152,11 +152,11 @@ export default function ResultsScreen({ run, onPlayAgain, onMenu }: { run: RunSu
             <div className="panel animate-fade-up grid grid-cols-2 gap-4 p-6">
               <div>
                 <div className="text-[11px] font-bold uppercase tracking-[0.25em] text-violet-300/60">Final Score</div>
-                <div className="text-5xl font-black tabular-nums" data-testid="final-score">{score.toLocaleString()}</div>
+                <div className="text-3xl font-black tabular-nums sm:text-5xl" data-testid="final-score">{score.toLocaleString()}</div>
               </div>
               <div>
                 <div className="text-[11px] font-bold uppercase tracking-[0.25em] text-violet-300/60">Accuracy</div>
-                <div className="text-5xl font-black tabular-nums text-cyan-300" data-testid="final-accuracy">{s.accuracy.toFixed(1)}%</div>
+                <div className="text-3xl font-black tabular-nums text-cyan-300 sm:text-5xl" data-testid="final-accuracy">{s.accuracy.toFixed(1)}%</div>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3 md:grid-cols-5">

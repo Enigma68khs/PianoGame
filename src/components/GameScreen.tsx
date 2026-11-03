@@ -26,11 +26,11 @@ const INITIAL: HudSnapshot = {
 
 function Stat({ label, value, accent, bump }: { label: string; value: string; accent?: string; bump?: number }) {
   return (
-    <div className="flex min-w-24 flex-col items-center">
-      <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-violet-300/60">{label}</span>
+    <div className="flex min-w-16 flex-col items-center sm:min-w-24">
+      <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-violet-300/60 sm:text-[10px] sm:tracking-[0.25em]">{label}</span>
       <span
         key={bump}
-        className={`text-3xl font-black tabular-nums leading-tight ${bump !== undefined ? "animate-bump" : ""}`}
+        className={`hud-value font-black tabular-nums leading-tight ${bump !== undefined ? "animate-bump" : ""}`}
         style={{ color: accent }}
       >
         {value}
@@ -45,6 +45,8 @@ export default function GameScreen({ song, difficulty, volume, onVolumeChange, o
   const controllerRef = useRef<GameController | null>(null);
   const [hud, setHud] = useState<HudSnapshot>({ ...INITIAL, title: song.title });
   const [fullscreen, setFullscreen] = useState(false);
+  const [canFullscreen, setCanFullscreen] = useState(false); // iPhone Safari has no page fullscreen
+  useEffect(() => setCanFullscreen(typeof document.documentElement.requestFullscreen === "function"), []);
   const onCompleteRef = useRef(onComplete);
   onCompleteRef.current = onComplete;
 
@@ -103,21 +105,25 @@ export default function GameScreen({ song, difficulty, volume, onVolumeChange, o
   const comboKey = stats.combo;
 
   return (
-    <div ref={rootRef} className="fixed inset-0 flex flex-col bg-[#07070f]">
+    <div
+      ref={rootRef}
+      className="fixed inset-0 flex flex-col bg-[#07070f]"
+      style={{ paddingLeft: "env(safe-area-inset-left)", paddingRight: "env(safe-area-inset-right)" }}
+    >
       {/* top HUD */}
-      <header className="relative z-10 flex h-[76px] shrink-0 items-center justify-between gap-4 border-b border-white/10 bg-black/30 px-6 backdrop-blur">
-        <div className="min-w-0 flex-1">
+      <header className="hud-top relative z-10 flex shrink-0 items-center justify-center gap-4 border-b border-white/10 bg-black/30 px-3 backdrop-blur sm:justify-between sm:px-6">
+        <div className="hidden min-w-0 flex-1 sm:block">
           <div className="truncate text-lg font-extrabold">{song.title}</div>
           <div className="truncate text-xs text-violet-200/60">
             {song.composer} · {difficulty.toUpperCase()}
           </div>
         </div>
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-3 sm:gap-6">
           <Stat label="Score" value={stats.score.toLocaleString()} />
           <Stat label="Combo" value={String(stats.combo)} accent={stats.combo >= 10 ? "#fde68a" : undefined} bump={comboKey} />
           <Stat label="Accuracy" value={`${stats.accuracy.toFixed(1)}%`} accent={stats.accuracy >= 90 ? "#67e8f9" : undefined} />
         </div>
-        <div className="flex-1 text-right text-xs text-violet-200/60">
+        <div className="hidden flex-1 text-right text-xs text-violet-200/60 sm:block">
           <span className="tabular-nums">{Math.round(hud.progress * 100)}%</span>
         </div>
         <div className="absolute inset-x-0 bottom-0 h-[3px] bg-white/10" role="progressbar" aria-valuenow={Math.round(hud.progress * 100)} aria-valuemin={0} aria-valuemax={100} aria-label="Song progress">
@@ -147,10 +153,10 @@ export default function GameScreen({ song, difficulty, volume, onVolumeChange, o
               <p className="mt-1 text-sm text-violet-200/60">일시정지 · 진행 시간과 음악이 멈췄습니다</p>
               <div className="mt-6 flex flex-col gap-3">
                 <button className="btn-primary rounded-xl py-3 text-lg font-extrabold" onClick={act(() => c()?.resume())}>
-                  Resume <span className="text-xs opacity-70">(Space)</span>
+                  Resume <span className="text-xs opacity-70 pointer-coarse:hidden">(Space)</span>
                 </button>
                 <button className="btn-ghost rounded-xl py-3 font-bold" onClick={act(() => c()?.requestRestart())}>
-                  Restart <span className="text-xs opacity-60">(R)</span>
+                  Restart <span className="text-xs opacity-60 pointer-coarse:hidden">(R)</span>
                 </button>
                 <button className="btn-ghost rounded-xl py-3 font-bold" onClick={act(onExit)}>
                   Song Select
@@ -167,10 +173,10 @@ export default function GameScreen({ song, difficulty, volume, onVolumeChange, o
               <p className="mt-2 text-sm text-violet-200/65">점수, 콤보, 연주 기록이 모두 초기화됩니다.</p>
               <div className="mt-6 grid grid-cols-2 gap-3">
                 <button className="btn-ghost rounded-xl py-3 font-bold" onClick={act(() => c()?.cancelRestart())}>
-                  Cancel <span className="text-xs opacity-60">(Space)</span>
+                  Cancel <span className="text-xs opacity-60 pointer-coarse:hidden">(Esc)</span>
                 </button>
                 <button className="btn-primary rounded-xl py-3 font-extrabold" onClick={act(() => c()?.restart())}>
-                  Restart <span className="text-xs opacity-70">(Enter)</span>
+                  Restart <span className="text-xs opacity-70 pointer-coarse:hidden">(Enter)</span>
                 </button>
               </div>
             </div>
@@ -179,24 +185,29 @@ export default function GameScreen({ song, difficulty, volume, onVolumeChange, o
       </div>
 
       {/* bottom controls */}
-      <footer className="relative z-10 flex h-[56px] shrink-0 items-center justify-between gap-4 border-t border-white/10 bg-black/30 px-6 backdrop-blur">
-        <div className="flex items-center gap-2">
+      <footer
+        className="hud-bottom relative z-10 flex shrink-0 items-center justify-between gap-2 border-t border-white/10 bg-black/30 px-3 backdrop-blur sm:gap-4 sm:px-6"
+        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+      >
+        <div className="flex items-center gap-1.5 sm:gap-2">
           <button
-            className="btn-ghost rounded-lg px-4 py-1.5 text-sm font-bold"
+            className="btn-ghost rounded-lg px-3 py-1.5 text-sm font-bold sm:px-4"
             onClick={act(() => (paused ? c()?.resume() : c()?.pause()))}
             disabled={hud.state === "COMPLETED"}
           >
-            {paused ? "▶ Resume" : "⏸ Pause"}
+            {paused ? "▶" : "⏸"}<span className="max-sm:hidden"> {paused ? "Resume" : "Pause"}</span>
           </button>
-          <button className="btn-ghost rounded-lg px-4 py-1.5 text-sm font-bold" onClick={act(() => c()?.requestRestart())}>
-            ↻ Restart
+          <button className="btn-ghost rounded-lg px-3 py-1.5 text-sm font-bold sm:px-4" onClick={act(() => c()?.requestRestart())}>
+            ↻<span className="max-sm:hidden"> Restart</span>
           </button>
-          <button className="btn-ghost rounded-lg px-4 py-1.5 text-sm font-bold" onClick={act(toggleFullscreen)}>
-            {fullscreen ? "⤡ Exit Full" : "⤢ Fullscreen"}
+          {canFullscreen && (
+            <button className="btn-ghost rounded-lg px-3 py-1.5 text-sm font-bold sm:px-4" onClick={act(toggleFullscreen)}>
+            {fullscreen ? "⤡" : "⤢"}<span className="max-sm:hidden">{fullscreen ? " Exit Full" : " Fullscreen"}</span>
           </button>
+          )}
         </div>
-        <div className="hidden text-xs text-violet-200/50 md:block">A · S · K · L &nbsp;|&nbsp; Space 일시정지 &nbsp;|&nbsp; Esc 메뉴 &nbsp;|&nbsp; R 재시작</div>
-        <label className="flex items-center gap-3 text-xs text-violet-200/70">
+        <div className="hidden text-xs text-violet-200/50 md:block pointer-coarse:hidden">A · S · K · L &nbsp;|&nbsp; Space 일시정지 &nbsp;|&nbsp; Esc 메뉴 &nbsp;|&nbsp; R 재시작</div>
+        <label className="flex min-w-0 items-center gap-2 text-xs text-violet-200/70 sm:gap-3">
           🔊
           <input
             type="range"
@@ -205,7 +216,7 @@ export default function GameScreen({ song, difficulty, volume, onVolumeChange, o
             step={0.01}
             value={volume}
             aria-label="Volume"
-            className="w-32 cursor-pointer"
+            className="w-20 cursor-pointer sm:w-32"
             onChange={(e) => {
               onVolumeChange(Number(e.target.value));
               c()?.setVolume(Number(e.target.value));

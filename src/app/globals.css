@@ -25,6 +25,36 @@ body {
   overflow: hidden;
   -webkit-font-smoothing: antialiased;
   user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+}
+
+canvas {
+  touch-action: none; /* the playfield handles touches itself: no scroll / zoom / pull-to-refresh */
+}
+
+/* Game HUD sizing: compact on phones (narrow portrait, or landscape with little height) */
+.hud-top {
+  height: 76px;
+}
+.hud-bottom {
+  height: 56px;
+}
+.hud-value {
+  font-size: 1.875rem;
+}
+@media (max-height: 520px), (max-width: 640px) {
+  .hud-top {
+    height: 54px;
+  }
+  .hud-bottom {
+    height: 46px;
+  }
+  .hud-value {
+    font-size: 1.3rem;
+  }
 }
 
 .panel {
