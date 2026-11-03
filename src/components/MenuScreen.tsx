@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { DIFFICULTY } from "@/engine/constants";
 import type { Difficulty } from "@/engine/types";
 import { CATALOG, getSong } from "@/songs";
@@ -50,6 +50,38 @@ function Logo() {
 
 export default function MenuScreen({ songId, onSong, difficulty, onDifficulty, volume, onVolume, onStart }: Props) {
   const [starting, setStarting] = useState(false);
+  const startingRef = useRef(false);
+  const onStartRef = useRef(onStart);
+  onStartRef.current = onStart;
+
+  const begin = async () => {
+    if (startingRef.current) return;
+    startingRef.current = true;
+    setStarting(true);
+    try {
+      await onStartRef.current();
+    } finally {
+      startingRef.current = false;
+      setStarting(false);
+    }
+  };
+
+  // Space starts the game (spec §4). The key press is also the user gesture that unlocks audio.
+  useEffect(() => {
+    const down = (e: KeyboardEvent) => {
+      if (e.code !== "Space" || e.ctrlKey || e.metaKey || e.altKey) return;
+      e.preventDefault(); // no page scroll, and no "click" on whichever button has focus
+      if (!e.repeat) void begin();
+    };
+    const up = (e: KeyboardEvent) => e.code === "Space" && e.preventDefault();
+    window.addEventListener("keydown", down);
+    window.addEventListener("keyup", up);
+    return () => {
+      window.removeEventListener("keydown", down);
+      window.removeEventListener("keyup", up);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const song = getSong(songId);
   const timed = song ? timeSong(song, difficulty) : null;
 
@@ -146,7 +178,7 @@ export default function MenuScreen({ songId, onSong, difficulty, onDifficulty, v
               <div className="flex items-center justify-center gap-3">
                 {LANE_KEYS.map((l) => (
                   <div key={l.k} className="flex flex-col items-center gap-1">
-                    <span className="keycap !h-14 !min-w-14 text-2xl" style={{ boxShadow: `0 4px 0 ${l.c}, 0 8px 18px ${l.c}55` }}>
+                    <span className={`keycap !h-14 !min-w-14 ${l.k.length > 1 ? "!px-4 text-base" : "text-2xl"}`} style={{ boxShadow: `0 4px 0 ${l.c}, 0 8px 18px ${l.c}55` }}>
                       {l.k}
                     </span>
                     <span className="text-[10px] text-violet-200/60">Lane {LANE_KEYS.indexOf(l) + 1}</span>
@@ -182,18 +214,11 @@ export default function MenuScreen({ songId, onSong, difficulty, onDifficulty, v
             </div>
 
             <button
-              onClick={async () => {
-                setStarting(true);
-                try {
-                  await onStart();
-                } finally {
-                  setStarting(false);
-                }
-              }}
+              onClick={begin}
               disabled={starting}
               className="btn-primary mt-auto rounded-2xl px-8 py-5 text-2xl font-black tracking-wide text-white disabled:opacity-60"
             >
-              {starting ? "Loading…" : "▶  Start Game"}
+              {starting ? "Loading…" : <>▶  Start Game <span className="text-sm font-semibold opacity-70">(Space)</span></>}
             </button>
           </div>
         </section>

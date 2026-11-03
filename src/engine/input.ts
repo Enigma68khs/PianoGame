@@ -1,7 +1,7 @@
 import { LANE_BY_CODE } from "./constants";
 import type { LaneIndex } from "./types";
 
-export type GameCommand = "space" | "escape" | "restart" | "enter";
+export type GameCommand = "pause" | "escape" | "restart" | "enter";
 
 export interface KeyEventLike {
   code: string;
@@ -19,7 +19,7 @@ export interface InputHandlers {
 }
 
 const COMMAND_BY_CODE: Record<string, GameCommand> = {
-  Space: "space",
+  Space: "pause",
   Escape: "escape",
   KeyR: "restart",
   Enter: "enter",

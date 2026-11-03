@@ -107,7 +107,7 @@ describe("GameInput", () => {
     h.input.keydown(h.ev("KeyR", false, { ctrlKey: true })); // Ctrl+R = reload
     h.input.keydown(h.ev("KeyA", false, { metaKey: true }));
     expect(h.prevented()).toBe(3);
-    expect(h.log).toEqual(["cmd:space", "down0", "cmd:escape"]);
+    expect(h.log).toEqual(["cmd:pause", "down0", "cmd:escape"]);
   });
 
   it("commands: Space, Escape, R, Enter fire once per press", () => {
@@ -117,7 +117,7 @@ describe("GameInput", () => {
       h.input.keydown(h.ev(code, true));
       h.input.keyup(h.ev(code));
     }
-    expect(h.log).toEqual(["cmd:space", "cmd:escape", "cmd:restart", "cmd:enter"]);
+    expect(h.log).toEqual(["cmd:pause", "cmd:escape", "cmd:restart", "cmd:enter"]);
   });
 
   it("reset() clears held keys (optionally reporting releases) so nothing sticks after pause", () => {

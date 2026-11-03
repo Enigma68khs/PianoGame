@@ -3,7 +3,8 @@ import { getAudio } from "@/audio/audioEngine";
 import type { PianoSynth } from "@/audio/pianoSynth";
 import { pitchName, timeSong } from "@/songs/builder";
 import { SongClock } from "./clock";
-import { COUNTDOWN_SECONDS, END_PADDING, FALL_TIME, JUDGE, LANES, LANE_COUNT } from "./constants";
+import { createBackground } from "./backgrounds";
+import { COUNTDOWN_SECONDS, DIFFICULTY, END_PADDING, FALL_TIME, JUDGE, LANES, LANE_COUNT } from "./constants";
 import { GameInput, type GameCommand } from "./input";
 import { Renderer } from "./renderer";
 import { PlaySession } from "./session";
@@ -80,6 +81,7 @@ export class GameController {
   private stats: Stats = emptyStats();
   private disposers: (() => void)[] = [];
   private analyser: AnalyserNode | null = null;
+  private readonly pulsePeriod: number;
 
   private constructor(
     private readonly opts: ControllerOptions,
@@ -88,7 +90,9 @@ export class GameController {
     this.timed = timeSong(opts.song, opts.difficulty);
     this.session = new PlaySession(this.timed);
     this.clock = new SongClock(() => synth.ctx.currentTime);
-    this.renderer = new Renderer(opts.canvas);
+    this.renderer = new Renderer(opts.canvas, createBackground(opts.song.id));
+    // one pulse per eighth-note of the music (3/8 time)
+    this.pulsePeriod = 60 / opts.song.bpm / DIFFICULTY[opts.difficulty].tempo / 2;
     this.scheduler = new AccompanimentScheduler(synth, this.clock, this.timed.accompaniment);
     this.input = new GameInput({
       onLaneDown: (lane) => this.laneDownEvent(lane),
@@ -253,7 +257,7 @@ export class GameController {
 
   private command(cmd: GameCommand) {
     switch (cmd) {
-      case "space":
+      case "pause":
         if (this.confirmRestart) return;
         if (this.state === "PLAYING" || this.state === "READY") this.pause();
         else if (this.state === "PAUSED") this.resume();
@@ -351,7 +355,14 @@ export class GameController {
     }
 
     this.renderer.render(
-      { t, states: this.session.states, laneDown: this.laneDown, active: this.state === "PLAYING" },
+      {
+        t,
+        states: this.session.states,
+        laneDown: this.laneDown,
+        active: this.state === "PLAYING",
+        beat: this.state === "PLAYING" ? Math.exp(-5 * ((((t % this.pulsePeriod) + this.pulsePeriod) % this.pulsePeriod) / this.pulsePeriod)) : 0,
+        energy: Math.min(1, this.stats.combo / 40),
+      },
       performance.now() / 1000,
     );
     if (this.state === "PLAYING") this.emit(false);

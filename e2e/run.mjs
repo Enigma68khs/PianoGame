@@ -39,8 +39,10 @@ check("menu renders (logo, song card, difficulty, volume, Start)", (await page.l
 await page.screenshot({ path: "e2e/shots/1-menu.png" });
 
 await page.getByRole("radio", { name: /Hard/ }).click(); // shortest run
-await page.getByText("Start Game").click();
+// Space on the menu starts the game (focus is deliberately left on the Hard button: Space must not click it)
+await page.keyboard.press("Space");
 await page.waitForFunction(() => !!window.__pianoGame);
+check("Space on the menu starts the game", (await state()) === "READY");
 const audioState = await api(() => window.__pianoGame.getAudioState());
 check("AudioContext is running after the Start click", audioState === "running", audioState);
 check("state READY with countdown", (await state()) === "READY");

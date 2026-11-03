@@ -1,4 +1,5 @@
 import { FALL_TIME, LANES, LANE_COUNT } from "./constants";
+import type { Background } from "./backgrounds";
 import type { NoteState } from "./session";
 import type { Judgement, LaneIndex } from "./types";
 import { isHold, pitchName } from "@/songs/builder";
@@ -13,7 +14,7 @@ const JUDGE_COLORS: Record<Judgement | "early", string> = {
 };
 
 interface Fx {
-  kind: "ring" | "spark" | "text" | "flash";
+  kind: "ring" | "spark" | "text" | "flash" | "note";
   lane: LaneIndex;
   born: number;
   life: number;
@@ -44,6 +45,10 @@ export interface FrameInput {
   laneDown: readonly boolean[];
   /** True while the field should look "live". */
   active: boolean;
+  /** 0..1 pulse on every eighth-note of the music. */
+  beat: number;
+  /** 0..1 target excitement (combo-driven); smoothed by the renderer. */
+  energy: number;
 }
 
 const rr = (ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) => {
@@ -63,13 +68,13 @@ export class Renderer {
   private dpr = 1;
   private fx: Fx[] = [];
   private layout!: Layout;
-  private dust: { x: number; y: number; s: number; v: number }[] = [];
+  private energy = 0;
 
-  constructor(private readonly canvas: HTMLCanvasElement) {
+  constructor(
+    private readonly canvas: HTMLCanvasElement,
+    private readonly background: Background,
+  ) {
     this.ctx = canvas.getContext("2d", { alpha: false })!;
-    let seed = 42;
-    const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
-    for (let i = 0; i < 46; i++) this.dust.push({ x: rnd(), y: rnd(), s: 0.6 + rnd() * 1.6, v: 0.01 + rnd() * 0.03 });
     this.resize();
   }
 
@@ -115,6 +120,7 @@ export class Renderer {
     this.fx.push({ kind: "text", lane, born: now, life: 0.75, color, text: label });
     if (judgement === "perfect" || judgement === "great") {
       this.fx.push({ kind: "ring", lane, born: now, life: 0.5, color: LANE_COLORS[lane] });
+      this.fx.push({ kind: "note", lane, born: now, life: 1.3, color: LANE_COLORS[lane], text: ["♪", "♫", "♩", "♬"][(Math.random() * 4) | 0] });
       const n = judgement === "perfect" ? 14 : 8;
       for (let i = 0; i < n; i++) {
         const a = (Math.PI * 2 * i) / n + Math.random() * 0.4;
@@ -140,7 +146,8 @@ export class Renderer {
     const L = this.resize();
     const ctx = this.ctx;
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
-    this.drawBackground(L, now);
+    this.energy += (f.energy - this.energy) * 0.04;
+    this.background.draw(ctx, L, { now, beat: f.beat, energy: this.energy });
     this.drawLanes(L, f);
     this.drawTiles(L, f, now);
     this.drawJudgeLine(L);
@@ -148,41 +155,14 @@ export class Renderer {
     this.drawFx(L, now);
   }
 
-  private drawBackground(L: Layout, now: number) {
-    const ctx = this.ctx;
-    const g = ctx.createLinearGradient(0, 0, 0, L.H);
-    g.addColorStop(0, "#07070f");
-    g.addColorStop(0.55, "#0c0a1c");
-    g.addColorStop(1, "#150f2b");
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, L.W, L.H);
-
-    const rg = ctx.createRadialGradient(L.W / 2, L.judgeY, 10, L.W / 2, L.judgeY, L.W * 0.55);
-    rg.addColorStop(0, "rgba(124,92,255,0.22)");
-    rg.addColorStop(1, "rgba(124,92,255,0)");
-    ctx.fillStyle = rg;
-    ctx.fillRect(0, 0, L.W, L.H);
-
-    // drifting dust motes in the stage light
-    ctx.fillStyle = "rgba(200,190,255,0.35)";
-    for (const d of this.dust) {
-      const y = (((d.y - now * d.v) % 1) + 1) % 1;
-      ctx.globalAlpha = 0.15 + 0.35 * Math.sin((y + d.x) * 6.28) ** 2;
-      ctx.beginPath();
-      ctx.arc(d.x * L.W, y * L.H, d.s, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.globalAlpha = 1;
-  }
-
   private drawLanes(L: Layout, f: FrameInput) {
     const ctx = this.ctx;
     // field backdrop
     const fg = ctx.createLinearGradient(0, 0, 0, L.judgeY);
-    fg.addColorStop(0, "rgba(255,255,255,0.015)");
-    fg.addColorStop(1, "rgba(255,255,255,0.05)");
+    fg.addColorStop(0, "rgba(5,4,20,0.62)");
+    fg.addColorStop(1, "rgba(14,10,40,0.5)");
     ctx.fillStyle = fg;
-    ctx.fillRect(L.fieldX, 0, L.fieldW, L.judgeY);
+    ctx.fillRect(L.fieldX, 0, L.fieldW, L.judgeY + L.padH);
 
     for (let i = 0; i < LANE_COUNT; i++) {
       const x = L.fieldX + i * L.laneW;
@@ -360,7 +340,7 @@ export class Renderer {
       ctx.fill();
       ctx.shadowBlur = 0;
       ctx.fillStyle = down ? "#ffffff" : "#312e5a";
-      ctx.font = `800 ${Math.min(44, L.laneW * 0.26)}px system-ui, sans-serif`;
+      ctx.font = `800 ${Math.min(44, L.laneW * 0.26) * (LANES[i].label.length > 1 ? 0.5 : 1)}px system-ui, sans-serif`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(LANES[i].label, x + w / 2, y + h / 2 + (down ? 3 : 0));
@@ -400,6 +380,16 @@ export class Renderer {
           ctx.globalAlpha = (1 - p) * 0.45;
           ctx.fillStyle = e.color;
           ctx.fillRect(L.fieldX + e.lane * L.laneW, 0, L.laneW, L.judgeY + L.padH);
+          break;
+        }
+        case "note": {
+          const y = L.judgeY - 30 - p * L.H * 0.4;
+          ctx.globalAlpha = (1 - p) * 0.9;
+          ctx.fillStyle = e.color;
+          ctx.font = `${Math.max(20, L.laneW * 0.2)}px "Apple Symbols","Segoe UI Symbol","Noto Sans Symbols2","DejaVu Sans",serif`;
+          ctx.textAlign = "center";
+          ctx.fillText(e.text ?? "♪", cx + Math.sin(p * 7 + e.lane) * 22, y);
+          ctx.textAlign = "start";
           break;
         }
         case "text": {

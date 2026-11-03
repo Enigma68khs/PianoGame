@@ -167,7 +167,7 @@ export default function GameScreen({ song, difficulty, volume, onVolumeChange, o
               <p className="mt-2 text-sm text-violet-200/65">점수, 콤보, 연주 기록이 모두 초기화됩니다.</p>
               <div className="mt-6 grid grid-cols-2 gap-3">
                 <button className="btn-ghost rounded-xl py-3 font-bold" onClick={act(() => c()?.cancelRestart())}>
-                  Cancel <span className="text-xs opacity-60">(Esc)</span>
+                  Cancel <span className="text-xs opacity-60">(Space)</span>
                 </button>
                 <button className="btn-primary rounded-xl py-3 font-extrabold" onClick={act(() => c()?.restart())}>
                   Restart <span className="text-xs opacity-70">(Enter)</span>
