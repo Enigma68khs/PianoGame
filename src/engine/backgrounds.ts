@@ -435,10 +435,264 @@ function moonlitLake(): Background {
   };
 }
 
+
+/**
+ * "Starry night" — for Twinkle, Twinkle, Little Star: a deep violet sky full of twinkling four-point stars
+ * that flare on the beat, a crescent moon, shooting stars and rolling hills.
+ */
+function starryNight(): Background {
+  const rnd = seeded(31337);
+  const dots = Array.from({ length: 170 }, () => ({ x: rnd(), y: rnd() * 0.85, r: 0.5 + rnd() * 1.2, tw: 0.7 + rnd() * 2.4, ph: rnd() * 6.28 }));
+  const big = Array.from({ length: 26 }, () => ({ x: rnd(), y: rnd() * 0.7, size: 5 + rnd() * 9, tw: 0.6 + rnd() * 1.6, ph: rnd() * 6.28 }));
+  const notes = Array.from({ length: 10 }, (_, i) => ({
+    side: i % 2, u: rnd(), off: rnd(), speed: 0.022 + rnd() * 0.025, glyph: GLYPHS[i % 4], size: 22 + rnd() * 20, sway: rnd() * 6.28, color: LANE_COLORS[i % 4],
+  }));
+  const star4 = (ctx: CanvasRenderingContext2D, x: number, y: number, r: number) => {
+    ctx.beginPath();
+    ctx.moveTo(x, y - r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.quadraticCurveTo(x, y, x, y + r);
+    ctx.quadraticCurveTo(x, y, x - r, y);
+    ctx.quadraticCurveTo(x, y, x, y - r);
+    ctx.fill();
+  };
+  return {
+    draw(ctx, L, s) {
+      const { W, H, fieldX, fieldW } = L;
+      const { now, beat, energy } = s;
+      const rightX = fieldX + fieldW;
+      const sky = ctx.createLinearGradient(0, 0, 0, H);
+      sky.addColorStop(0, "#0a0630");
+      sky.addColorStop(0.55, "#1d1052");
+      sky.addColorStop(1, "#3b1a6b");
+      ctx.fillStyle = sky;
+      ctx.fillRect(0, 0, W, H);
+      for (const d of dots) {
+        ctx.globalAlpha = 0.25 + 0.75 * (0.5 + 0.5 * Math.sin(now * d.tw + d.ph));
+        ctx.fillStyle = "#f1ecff";
+        ctx.beginPath();
+        ctx.arc(d.x * W, d.y * H, d.r, 0, 6.2832);
+        ctx.fill();
+      }
+      for (const b of big) {
+        const tw = 0.5 + 0.5 * Math.sin(now * b.tw + b.ph);
+        ctx.globalAlpha = 0.35 + 0.55 * tw + 0.2 * beat;
+        ctx.fillStyle = "#fff6c9";
+        star4(ctx, b.x * W, b.y * H, b.size * (0.7 + 0.5 * tw + 0.5 * beat * energy + 0.2 * beat));
+      }
+      ctx.globalAlpha = 1;
+
+      // crescent moon
+      const mr = Math.min(60, H * 0.075);
+      const mx = W - rightX > 150 ? rightX + (W - rightX) / 2 : W * 0.86;
+      const my = H * 0.16;
+      const halo = ctx.createRadialGradient(mx, my, mr * 0.4, mx, my, mr * 3.4);
+      halo.addColorStop(0, `rgba(255,240,190,${0.25 + 0.15 * beat})`);
+      halo.addColorStop(1, "rgba(255,240,190,0)");
+      ctx.fillStyle = halo;
+      ctx.fillRect(mx - mr * 3.4, my - mr * 3.4, mr * 6.8, mr * 6.8);
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(mx, my, mr, 0, 6.2832);
+      ctx.clip();
+      ctx.fillStyle = "#fff3c4";
+      ctx.beginPath();
+      ctx.rect(mx - mr, my - mr, mr * 2, mr * 2);
+      ctx.arc(mx + mr * 0.45, my - mr * 0.12, mr * 0.88, 0, 6.2832, true);
+      ctx.fill();
+      ctx.restore();
+
+      // shooting stars
+      for (let k = 0; k < 3; k++) {
+        const ph = (now * 0.12 + k / 3) % 1;
+        if (ph > 0.14) continue;
+        const t = ph / 0.14;
+        const x0 = W * (0.15 + 0.3 * k) + t * W * 0.22;
+        const y0 = H * (0.08 + 0.12 * k) + t * H * 0.12;
+        const g = ctx.createLinearGradient(x0, y0, x0 - 90, y0 - 50);
+        g.addColorStop(0, `rgba(255,255,255,${0.9 * (1 - t)})`);
+        g.addColorStop(1, "rgba(255,255,255,0)");
+        ctx.strokeStyle = g;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x0, y0);
+        ctx.lineTo(x0 - 90, y0 - 50);
+        ctx.stroke();
+      }
+
+      // hills
+      for (const [base, amp, col] of [[0.8, 0.035, "#150c3a"], [0.87, 0.03, "#0c0624"]] as const) {
+        ctx.fillStyle = col;
+        ctx.beginPath();
+        ctx.moveTo(0, H);
+        for (let x = 0; x <= W; x += 24) ctx.lineTo(x, H * base + Math.sin(x * 0.006 + base * 9) * H * amp);
+        ctx.lineTo(W, H);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      for (const n of notes) {
+        const prog = (((n.off + now * n.speed) % 1) + 1) % 1;
+        const lo = n.side === 0 ? 0 : rightX;
+        const hi = n.side === 0 ? fieldX : W;
+        const range = hi - lo;
+        const x = range > 80 ? lo + range * (0.15 + 0.7 * n.u) : W * (n.side === 0 ? 0.08 : 0.92);
+        ctx.globalAlpha = Math.sin(prog * Math.PI) * (0.4 + 0.3 * energy + 0.25 * beat);
+        ctx.fillStyle = rgba(n.color, 1);
+        ctx.font = `${n.size * (1 + 0.1 * beat)}px ${GLYPH_FONT}`;
+        ctx.fillText(n.glyph, x + Math.sin(now * 0.8 + n.sway) * 16, H * (1.05 - prog * 1.15));
+      }
+      ctx.globalAlpha = 1;
+      ctx.textAlign = "start";
+      ctx.textBaseline = "alphabetic";
+    },
+  };
+}
+
+/**
+ * "Snowy night" — for Jingle Bells: falling snow, snow-covered hills with pines, and little cottages whose
+ * windows glow warmly in time with the music.
+ */
+function snowyNight(): Background {
+  const rnd = seeded(2112);
+  const flakes = Array.from({ length: 110 }, () => ({ x: rnd(), y: rnd(), r: 1.2 + rnd() * 2.8, speed: 0.04 + rnd() * 0.09, sway: 0.5 + rnd() * 1.2, ph: rnd() * 6.28 }));
+  const stars = Array.from({ length: 70 }, () => ({ x: rnd(), y: rnd() * 0.45, r: 0.5 + rnd() * 1.1, tw: 0.8 + rnd() * 2, ph: rnd() * 6.28 }));
+  const notes = Array.from({ length: 8 }, (_, i) => ({
+    side: i % 2, u: rnd(), off: rnd(), speed: 0.02 + rnd() * 0.02, glyph: GLYPHS[i % 4], size: 22 + rnd() * 18, sway: rnd() * 6.28, color: LANE_COLORS[i % 4],
+  }));
+  const pine = (ctx: CanvasRenderingContext2D, x: number, base: number, h: number) => {
+    ctx.fillStyle = "#0a2236";
+    for (let i = 0; i < 3; i++) {
+      const y = base - h * (0.35 * i);
+      const w = h * (0.5 - i * 0.1);
+      ctx.beginPath();
+      ctx.moveTo(x, y - h * 0.45);
+      ctx.lineTo(x + w / 2, y);
+      ctx.lineTo(x - w / 2, y);
+      ctx.closePath();
+      ctx.fill();
+    }
+  };
+  const cottage = (ctx: CanvasRenderingContext2D, x: number, base: number, w: number, glow: number) => {
+    const h = w * 0.55;
+    ctx.fillStyle = "#07131f";
+    ctx.fillRect(x - w / 2, base - h, w, h);
+    ctx.beginPath(); // roof with a snow cap
+    ctx.moveTo(x - w * 0.62, base - h);
+    ctx.lineTo(x, base - h - w * 0.42);
+    ctx.lineTo(x + w * 0.62, base - h);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = "#e8f2ff";
+    ctx.beginPath();
+    ctx.moveTo(x - w * 0.62, base - h);
+    ctx.lineTo(x, base - h - w * 0.42);
+    ctx.lineTo(x + w * 0.62, base - h);
+    ctx.lineTo(x + w * 0.5, base - h + 4);
+    ctx.lineTo(x, base - h - w * 0.3);
+    ctx.lineTo(x - w * 0.5, base - h + 4);
+    ctx.closePath();
+    ctx.fill();
+    const wg = ctx.createRadialGradient(x, base - h * 0.5, 2, x, base - h * 0.5, w * 0.9);
+    wg.addColorStop(0, `rgba(255,200,100,${0.35 + 0.3 * glow})`);
+    wg.addColorStop(1, "rgba(255,200,100,0)");
+    ctx.fillStyle = wg;
+    ctx.fillRect(x - w, base - h * 1.6, w * 2, h * 2.2);
+    ctx.fillStyle = `rgba(255,214,120,${0.8 + 0.2 * glow})`;
+    ctx.fillRect(x - w * 0.28, base - h * 0.72, w * 0.22, h * 0.36);
+    ctx.fillRect(x + w * 0.08, base - h * 0.72, w * 0.22, h * 0.36);
+  };
+  return {
+    draw(ctx, L, s) {
+      const { W, H, fieldX, fieldW } = L;
+      const { now, beat, energy } = s;
+      const rightX = fieldX + fieldW;
+      const sky = ctx.createLinearGradient(0, 0, 0, H);
+      sky.addColorStop(0, "#050f22");
+      sky.addColorStop(0.5, "#123257");
+      sky.addColorStop(1, "#2f6590");
+      ctx.fillStyle = sky;
+      ctx.fillRect(0, 0, W, H);
+      for (const st of stars) {
+        ctx.globalAlpha = 0.25 + 0.75 * (0.5 + 0.5 * Math.sin(now * st.tw + st.ph));
+        ctx.fillStyle = "#eaf4ff";
+        ctx.beginPath();
+        ctx.arc(st.x * W, st.y * H, st.r, 0, 6.2832);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+
+      // far hill, cottages and pines, near hill
+      const ridge = (base: number, amp: number, k: number) => (x: number) => H * base + Math.sin(x * k + base * 7) * H * amp;
+      const far = ridge(0.74, 0.03, 0.005);
+      const near = ridge(0.84, 0.03, 0.007);
+      ctx.fillStyle = "#cfe2f4";
+      ctx.beginPath();
+      ctx.moveTo(0, H);
+      for (let x = 0; x <= W; x += 20) ctx.lineTo(x, far(x));
+      ctx.lineTo(W, H);
+      ctx.closePath();
+      ctx.fill();
+      const glow = beat * 0.7 + energy * 0.4;
+      if (fieldX > 140) cottage(ctx, fieldX * 0.5, far(fieldX * 0.5) + 6, Math.min(150, fieldX * 0.5), glow);
+      if (W - rightX > 140) cottage(ctx, rightX + (W - rightX) * 0.5, far(rightX + (W - rightX) * 0.5) + 6, Math.min(130, (W - rightX) * 0.45), glow);
+      for (const px of [0.06, 0.2, 0.33, 0.67, 0.8, 0.94]) pine(ctx, px * W, far(px * W) + 8, Math.min(120, H * 0.16));
+      ctx.fillStyle = "#f4f9ff";
+      ctx.beginPath();
+      ctx.moveTo(0, H);
+      for (let x = 0; x <= W; x += 20) ctx.lineTo(x, near(x));
+      ctx.lineTo(W, H);
+      ctx.closePath();
+      ctx.fill();
+      const shade = ctx.createLinearGradient(0, H * 0.78, 0, H);
+      shade.addColorStop(0, "rgba(40,80,130,0)");
+      shade.addColorStop(1, "rgba(20,40,90,0.5)");
+      ctx.fillStyle = shade;
+      ctx.fillRect(0, H * 0.78, W, H * 0.22);
+
+      // snow
+      const count = 70 + Math.round(energy * 40);
+      ctx.fillStyle = "#ffffff";
+      for (let i = 0; i < count; i++) {
+        const f = flakes[i];
+        const y = ((((f.y + now * f.speed * (1 + energy * 0.6)) % 1.06) + 1.06) % 1.06) * H - H * 0.03;
+        const x = f.x * W + Math.sin(now * f.sway + f.ph) * 26;
+        ctx.globalAlpha = 0.55 + 0.35 * Math.sin(f.ph + now);
+        ctx.beginPath();
+        ctx.arc(x, y, f.r, 0, 6.2832);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      for (const n of notes) {
+        const prog = (((n.off + now * n.speed) % 1) + 1) % 1;
+        const lo = n.side === 0 ? 0 : rightX;
+        const hi = n.side === 0 ? fieldX : W;
+        const range = hi - lo;
+        const x = range > 80 ? lo + range * (0.15 + 0.7 * n.u) : W * (n.side === 0 ? 0.08 : 0.92);
+        ctx.globalAlpha = Math.sin(prog * Math.PI) * (0.45 + 0.3 * energy + 0.25 * beat);
+        ctx.fillStyle = rgba(n.color, 1);
+        ctx.font = `${n.size * (1 + 0.1 * beat)}px ${GLYPH_FONT}`;
+        ctx.fillText(n.glyph, x + Math.sin(now * 0.7 + n.sway) * 16, H * (1.05 - prog * 1.15));
+      }
+      ctx.globalAlpha = 1;
+      ctx.textAlign = "start";
+      ctx.textBaseline = "alphabetic";
+    },
+  };
+}
+
 const THEMES: Record<string, () => Background> = {
   "fur-elise": () => moonlitHall("moon"),
   "canon-in-d": () => moonlitHall("dawn"),
   "moonlight-sonata": moonlitLake,
+  "ode-to-joy": () => moonlitHall("dawn"),
+  "twinkle-twinkle": starryNight,
+  "jingle-bells": snowyNight,
 };
 
 /** Background for a song; unknown songs fall back to the moonlit hall. */

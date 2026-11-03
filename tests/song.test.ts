@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { canonInD } from "@/songs/canonInD";
 import { moonlightSonata } from "@/songs/moonlightSonata";
+import { odeToJoy } from "@/songs/odeToJoy";
+import { twinkleTwinkle } from "@/songs/twinkleTwinkle";
+import { jingleBells } from "@/songs/jingleBells";
 import { furElise } from "@/songs/furElise";
 import { SONGS } from "@/songs";
 import { buildLaneSounds, buildSong, pitchFromName, pitchName, timeSong } from "@/songs/builder";
@@ -193,6 +196,70 @@ describe("Moonlight Sonata chart", () => {
 
   it("is played softly", () => {
     expect(notes.every((n) => n.velocity < 0.7)).toBe(true);
+  });
+});
+
+/** Shared: a pitch always sits on the same lane, and a higher pitch never sits on a lower lane. */
+function expectFixedPitchLanes(song: typeof odeToJoy) {
+  const lane = new Map<number, number>();
+  for (const n of song.melody) {
+    if (n.chordGroup !== null) continue;
+    expect(lane.get(n.pitch) ?? n.lane).toBe(n.lane);
+    lane.set(n.pitch, n.lane);
+  }
+  const byPitch = [...lane.entries()].sort((a, b) => a[0] - b[0]);
+  for (let i = 1; i < byPitch.length; i++) expect(byPitch[i][1]).toBeGreaterThanOrEqual(byPitch[i - 1][1]);
+}
+const letters = (song: typeof odeToJoy, from: number, to: number) => song.melody.slice(from, to).map((n) => pitchName(n.pitch).replace(/\d/, ""));
+
+describe("Ode to Joy chart", () => {
+  it("opens with E E F G G F E D C C D E E D D and repeats it (bars 1-8)", () => {
+    expect(letters(odeToJoy, 0, 15).join(" ")).toBe("E E F G G F E D C C D E E D D");
+    expect(letters(odeToJoy, 15, 30).join(" ")).toBe("E E F G G F E D C C D E D C C");
+  });
+  it("bridge (bars 9-12) is D D E C · D E F E C · D E F E D · C D G", () => {
+    // 4 + 5 + 5 + 3 notes right after the first 8 bars (15 + 15 = 30 notes)
+    expect(letters(odeToJoy, 30, 47).join(" ")).toBe("D D E C D E F E C D E F E D C D G");
+  });
+  it("the last phrase returns to the theme and closes on a held C-major chord", () => {
+    const chord = odeToJoy.melody.filter((n) => n.chordGroup !== null);
+    expect(chord.map((n) => pitchName(n.pitch)).sort()).toEqual(["C4", "E4", "G4"]);
+    expect(chord.every((n) => n.hold)).toBe(true);
+  });
+  it("dotted quarters and halves are holds, quarters are taps; pitches have fixed lanes", () => {
+    for (const n of odeToJoy.melody.filter((n) => n.chordGroup === null)) expect(n.hold).toBe(n.durationBeats >= 1.5);
+    expectFixedPitchLanes(odeToJoy);
+  });
+});
+
+describe("Twinkle Twinkle chart", () => {
+  it("is the six-phrase tune C C G G A A G · F F E E D D C · G G F F E E D ×2 · C C G G A A G · F F E E D D C", () => {
+    const notes = letters(twinkleTwinkle, 0, 99);
+    expect(notes.slice(0, 7).join(" ")).toBe("C C G G A A G");
+    expect(notes.slice(7, 14).join(" ")).toBe("F F E E D D C");
+    expect(notes.slice(14, 21).join(" ")).toBe("G G F F E E D");
+    expect(notes.slice(21, 28).join(" ")).toBe("G G F F E E D");
+    expect(notes.slice(28, 35).join(" ")).toBe("C C G G A A G");
+    expect(notes.slice(35, 41).join(" ")).toBe("F F E E D D");
+  });
+  it("ends on a held C-major chord; fixed pitch lanes", () => {
+    const chord = twinkleTwinkle.melody.filter((n) => n.chordGroup !== null);
+    expect(chord.map((n) => pitchName(n.pitch)).sort()).toEqual(["C4", "E4", "G4"]);
+    expectFixedPitchLanes(twinkleTwinkle);
+  });
+});
+
+describe("Jingle Bells chart", () => {
+  const first = "E E E E E E E G C D E F F F F F E E E E E D D E D G".split(" ");
+  it("chorus: jingle bells ×2, jingle all the way, oh what fun… (26 notes), played twice", () => {
+    expect(letters(jingleBells, 0, 26)).toEqual(first);
+    expect(letters(jingleBells, 26, 52)).toEqual(first);
+  });
+  it("closes on a held C-major chord; fixed pitch lanes", () => {
+    const chord = jingleBells.melody.filter((n) => n.chordGroup !== null);
+    expect(chord.map((n) => pitchName(n.pitch)).sort()).toEqual(["C4", "E4", "G4"]);
+    expect(jingleBells.melody.length).toBe(52 + 3);
+    expectFixedPitchLanes(jingleBells);
   });
 });
 

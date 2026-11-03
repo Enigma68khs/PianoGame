@@ -267,6 +267,17 @@ check("Moonlight: correct key plays G#3 (MIDI 56) — clearly louder than G3 and
 await page.waitForTimeout(4000);
 await page.screenshot({ path: "e2e/shots/9-moonlight-playing.png" });
 
+// ── 10. the three simple songs are registered and load with the right first note ───────────────
+for (const [label, firstPitch, firstLane] of [["Ode to Joy", 64, 2], ["Twinkle Twinkle Little Star", 60, 0], ["Jingle Bells", 64, 2]]) {
+  await page.goto(BASE);
+  await page.waitForSelector("text=Start Game");
+  await page.getByRole("button", { name: new RegExp(label) }).click();
+  await page.keyboard.press("Space");
+  await page.waitForFunction(() => window.__pianoGame?.getState() === "READY");
+  const info = await api(() => { const n = window.__pianoGame.getNotes(); return { count: n.length, p: n[0].pitch, l: n[0].lane }; });
+  check(`${label} loads (first note MIDI ${firstPitch} on lane ${firstLane})`, info.p === firstPitch && info.l === firstLane && info.count > 20, JSON.stringify(info));
+}
+
 check("no console/page errors", errors.length === 0, errors.slice(0, 3).join(" | "));
 await browser.close();
 

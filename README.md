@@ -10,7 +10,7 @@ A browser piano rhythm game (keyboard on desktop, touch on phones). Four tile la
 
 The game never stops for mistakes; when the song ends you get a result screen with accuracy and a full note-by-note log.
 
-> **Music data caveat (please read):** the Für Elise, Canon in D and Moonlight Sonata charts are *hand transcriptions* made for this project. It has **not** been proof-read against an Urtext/Henle/IMSLP edition. See [Music data provenance](#music-data-provenance).
+> **Music data caveat (please read):** every chart (Für Elise, Canon in D, Moonlight Sonata, Ode to Joy, Twinkle Twinkle Little Star, Jingle Bells) is a *hand transcription* made for this project. It has **not** been proof-read against an Urtext/Henle/IMSLP edition. See [Music data provenance](#music-data-provenance).
 
 ## Run it
 
@@ -27,7 +27,7 @@ Checks:
 
 ```bash
 npm run typecheck    # tsc --noEmit
-npm test             # 81 unit tests (vitest)
+npm test             # 116 unit tests (vitest)
 # browser end-to-end (real Chrome, real AudioContext). Needs Google Chrome installed (set CHROME_PATH otherwise):
 npm run build && npx next start -p 3100 &
 BASE_URL=http://localhost:3100 npm run test:e2e          # desktop keyboard flow
@@ -96,7 +96,8 @@ src/
     furElise.ts         chart: Für Elise (data only)
     canonInD.ts         chart: Canon in D (data only)
     moonlightSonata.ts  chart: Moonlight Sonata, opening bars (data only)
-    index.ts            catalog (Für Elise, Canon in D and Moonlight Sonata playable; Clair de Lune is "Coming Soon")
+    odeToJoy.ts · twinkleTwinkle.ts · jingleBells.ts   charts: the three easy songs (data only)
+    index.ts            catalog (six songs playable with a ★ difficulty guide; Clair de Lune is "Coming Soon")
   lib/storage.ts        localStorage wrapper
 tests/                  vitest unit tests
 e2e/run.mjs             Chrome end-to-end script (playwright-core)
@@ -129,6 +130,14 @@ Adding a song = adding one data file next to `furElise.ts` (melody tokens `pitch
 - **Verification level:** the pitches of bars 1–4 (figure and bass) were checked against a published harmonic study of the movement (B. Hamann, UC Davis, which gives the notes in its own letter notation); I could not check them against the score itself. Everything after bar 4 is just the repeat described above.
 - **Fixed pitch→lane table:** F♯3 G♯3 A3 → A · C4 C♯4 → S · D4 D♯4 → K · E4 F♯4 G♯4 → L. Played softly (velocity 0.62). Background: moonlit lake.
 
+### Ode to Joy, Twinkle Twinkle Little Star, Jingle Bells (easy songs)
+
+All three are public-domain melodies, hand-transcribed (no third-party MIDI/score/sample), each with a closing C-major chord added for the game, and each has its own background (sunrise hall / starry night / snowy night). The note sequences were cross-checked against letter-note pages on the web: Ode to Joy's opening 15 notes, Twinkle's first three phrases (the rest repeats them) and Jingle Bells' chorus. **The Ode to Joy bridge (bars 9–12: `D D E C · D E F E C · D E F E D · C D G`) is from memory and was not confirmed against a score.**
+- **Ode to Joy** — the complete 16-bar main theme (♩ = 100, ~40 s): C4 G3 → A, D4 → S, E4 → K, F4 G4 → L; dotted quarters and half notes are Holds.
+- **Twinkle Twinkle Little Star** — the melody once through, six phrases (♩ = 92, ~33 s): C4 → A, D4 → S, E4 F4 → K, G4 A4 → L; half notes are Holds.
+- **Jingle Bells** — the chorus twice (♩ = 112, ~36 s): C4 → A, D4 → S, E4 → K, F4 G4 → L; half and whole notes are Holds. The verses are not included.
+None of them is the complete piece in the full sense (just the tune/theme/chorus); the song cards show a rough difficulty guide (★).
+
 ### Clair de Lune — not implemented
 
 Debussy's *Clair de lune* (public-domain composition) is still a "Coming Soon" card. I could not obtain note-level data I can trust: the web sources I could reach (tutorials, analyses) describe key, chords and form but do not list the notes, and I am not willing to guess a famous melody from memory — the spec forbids presenting an imprecise imitation as the real piece. To add it, provide the notes from a source you are allowed to use (a score you own, a public-domain MIDI you have verified, or the letter notes of the right hand), and it only needs one new file next to the other charts.
@@ -139,8 +148,8 @@ Debussy's *Clair de lune* (public-domain composition) is still a "Coming Soon" c
 |---|---|
 | `npm run typecheck` | pass |
 | `npm run build` | pass |
-| `npm test` (81 unit tests: judging windows, wrong-note mapping, no auto-correction, misses are silent, chords, holds, full-song simulations for every song — perfect / all-wrong / silent —, clock pause/resume, key-repeat, simultaneous keys, stats, chart integrity and Canon-specific checks) | 81 / 81 pass |
-| `npm run test:e2e` (real Chrome, 41 checks) | 41 / 41 pass |
+| `npm test` (116 unit tests: judging windows, wrong-note mapping, no auto-correction, misses are silent, chords, holds, full-song simulations for every song — perfect / all-wrong / silent —, clock pause/resume, key-repeat, simultaneous keys, stats, chart integrity and Canon-specific checks) | 116 / 116 pass |
+| `npm run test:e2e` (real Chrome, 44 checks) | 44 / 44 pass |
 | `npm run test:e2e:mobile` (emulated iPhone 13, portrait + landscape, real CDP touch incl. two fingers at once: layout, touch hit with correct pitch, multi-touch, pause/resume by tap, results screen) | 28 / 28 pass |
 
 What the E2E run verifies in a real browser: menu renders; `AudioContext` is running after Start; countdown; Space/Esc pause freezes song time (±1 ms) and resume continues from the same position; `R` asks for confirmation, Esc cancels, Enter restarts with a cleared log; key auto-repeat produces one input; **measured on the synth output with an `AnalyserNode`: the correct key makes E5 (659 Hz) the loudest pitch, the wrong key makes D♯5 sound while E5 stays absent afterwards, and an unplayed note is silent**; a scripted autopilot plays the whole song with deliberate wrong keys and skipped notes (game keeps running, counts match the plan, mean input error 6 ms), the results screen and log appear, replay starts, Play Again works, reload returns to a working menu; no console errors.
@@ -157,7 +166,7 @@ What the E2E run verifies in a real browser: menu renders; `AudioContext` is run
 ## Not implemented / known limitations
 
 - Chart not proof-read against an Urtext; only an excerpt of the piece; tempo slowed.
-- Three playable excerpts; Clair de Lune is still "Coming Soon" (see above).
+- Six playable songs, all excerpts/themes; Clair de Lune is still "Coming Soon" (see above).
 - Piano is synthesized, not sampled; no sustain pedal, no velocity layers.
 - A Hold that is still held when you pause is treated as released at the pause position.
 - Keys pressed when nothing is due (including during the lead-in before the first tile) count as stray Wrong Notes by design.

@@ -99,7 +99,7 @@ export default function MenuScreen({ songId, onSong, difficulty, onDifficulty, v
           {/* songs */}
           <div className="flex flex-col gap-4">
             <h2 className="text-xs font-bold uppercase tracking-[0.25em] text-violet-300/70">Select Song · 곡 선택</h2>
-            <div className="grid grid-cols-2 gap-3 sm:gap-4">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-3">
               {CATALOG.map((c) => {
                 const selected = c.id === songId && c.available;
                 return (
@@ -114,7 +114,7 @@ export default function MenuScreen({ songId, onSong, difficulty, onDifficulty, v
                     ].join(" ")}
                     aria-pressed={selected}
                   >
-                    <div className="mb-4 flex items-end gap-1 sm:mb-8" aria-hidden>
+                    <div className={`mb-4 flex items-end gap-1 sm:mb-8 ${selected || !c.available ? "mt-6 sm:mt-0 xl:mt-6" : ""}`} aria-hidden>
                       {[14, 26, 18, 34, 22, 40, 16, 28].map((h, i) => (
                         <span
                           key={i}
@@ -129,14 +129,22 @@ export default function MenuScreen({ songId, onSong, difficulty, onDifficulty, v
                     </div>
                     <div className="text-base font-extrabold sm:text-xl">{c.title}</div>
                     <div className="text-xs text-violet-200/70 sm:text-sm">{c.composer}</div>
+                    {c.level && (
+                      <div className="mt-1 text-[11px] tracking-widest text-amber-300/80" aria-label={`Level ${c.level} of 3`}>
+                        {"★".repeat(c.level)}
+                        <span className="text-violet-300/30">{"★".repeat(3 - c.level)}</span>
+                      </div>
+                    )}
+                    {(selected || !c.available) && (
                     <span
                       className={[
                         "absolute right-2 top-2 rounded-full px-2 py-0.5 text-[9px] font-bold tracking-wide sm:right-4 sm:top-4 sm:px-3 sm:py-1 sm:text-[11px]",
                         c.available ? "bg-violet-500/30 text-violet-100" : "bg-white/10 text-slate-300",
                       ].join(" ")}
                     >
-                      {c.available ? (selected ? "SELECTED" : "PLAYABLE") : "Coming Soon"}
+                      {c.available ? "SELECTED" : "Coming Soon"}
                     </span>
+                    )}
                   </button>
                 );
               })}
@@ -216,7 +224,7 @@ export default function MenuScreen({ songId, onSong, difficulty, onDifficulty, v
               </label>
             </div>
 
-            <div className="mt-auto max-lg:fixed max-lg:inset-x-0 max-lg:bottom-0 max-lg:z-30 max-lg:bg-gradient-to-t max-lg:from-[#07070f] max-lg:via-[#07070f]/90 max-lg:to-transparent max-lg:px-4 max-lg:pb-[max(1rem,env(safe-area-inset-bottom))] max-lg:pt-6">
+            <div className="mt-auto lg:sticky lg:bottom-6 lg:z-20 max-lg:fixed max-lg:inset-x-0 max-lg:bottom-0 max-lg:z-30 max-lg:bg-gradient-to-t max-lg:from-[#07070f] max-lg:via-[#07070f]/90 max-lg:to-transparent max-lg:px-4 max-lg:pb-[max(1rem,env(safe-area-inset-bottom))] max-lg:pt-6">
             <button
               onClick={begin}
               disabled={starting}
