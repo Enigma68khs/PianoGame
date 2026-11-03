@@ -247,6 +247,29 @@ check("Canon: correct key plays F#5 (MIDI 78)", cp.peakMidi === 78, `peak MIDI $
 await page.waitForTimeout(5000);
 await page.screenshot({ path: "e2e/shots/8-canon-playing.png" });
 
+// ── 9. third song: Moonlight Sonata (and Clair de Lune must stay "Coming Soon") ──────────────────
+await page.goto(BASE);
+await page.waitForSelector("text=Start Game");
+check("Clair de Lune is still a disabled Coming Soon card", await page.getByRole("button", { name: /Clair de Lune/ }).isDisabled());
+await page.getByRole("button", { name: /Moonlight Sonata/ }).click();
+await page.getByRole("radio", { name: /Normal/ }).click();
+await page.keyboard.press("Space");
+await page.waitForFunction(() => window.__pianoGame?.getState() === "READY");
+const moon = await api(() => { const n = window.__pianoGame.getNotes(); return { count: n.length, first: n[0].pitch, lane: n[0].lane, holds: n.filter((x) => x.hold).length }; });
+check("Moonlight loads: first note G#3 (56) on lane 0, 99 notes, only the closing chord is a hold", moon.first === 56 && moon.lane === 0 && moon.count === 99 && moon.holds === 3, JSON.stringify(moon));
+await api(() => window.__pianoGame.probeStart());
+await waitState("PLAYING");
+await api(() => new Promise((resolve) => {
+  const g = window.__pianoGame;
+  const f = () => { if (g.getSongTime() >= -0.005) { window.dispatchEvent(new KeyboardEvent("keydown", { code: "KeyA", bubbles: true })); resolve(); } else requestAnimationFrame(f); };
+  f();
+}));
+await page.waitForTimeout(200);
+const mp = await api(() => window.__pianoGame.probe([]));
+check("Moonlight: correct key plays G#3 (MIDI 56)", mp.peakMidi === 56 || mp.peakMidi === 44, `peak MIDI ${mp.peakMidi} (${mp.peakHz.toFixed(1)} Hz)`);
+await page.waitForTimeout(4000);
+await page.screenshot({ path: "e2e/shots/9-moonlight-playing.png" });
+
 check("no console/page errors", errors.length === 0, errors.slice(0, 3).join(" | "));
 await browser.close();
 

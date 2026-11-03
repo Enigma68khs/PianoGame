@@ -45,6 +45,9 @@ export interface ChartDef {
   unit: number;
   /** Notes at least this long (beats) become Hold tiles. Defaults to HOLD_MIN_BEATS. */
   holdMinBeats?: number;
+  /** Melody / accompaniment loudness (0..1). Defaults 0.82 / 0.42. */
+  velocity?: number;
+  accompanimentVelocity?: number;
   /**
    * Melody tokens, in order:
    *   "E5:2:3"        pitch : length(units) : lane(0-3)
@@ -91,7 +94,7 @@ export function buildSong(def: ChartDef): SongData {
         type,
         hold,
         chordGroup: group,
-        velocity: 0.82,
+        velocity: def.velocity ?? 0.82,
         laneSounds: buildLaneSounds(pitch, lane),
       });
     });
@@ -105,7 +108,7 @@ export function buildSong(def: ChartDef): SongData {
       pitch: pitchFromName(m[1]),
       startBeat: Number(m[2]) * def.unit,
       durationBeats: Number(m[3]) * def.unit,
-      velocity: 0.42,
+      velocity: def.accompanimentVelocity ?? 0.42,
     };
   });
   accompaniment.sort((a, b) => a.startBeat - b.startBeat);

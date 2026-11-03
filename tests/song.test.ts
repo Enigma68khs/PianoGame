@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { canonInD } from "@/songs/canonInD";
+import { moonlightSonata } from "@/songs/moonlightSonata";
 import { furElise } from "@/songs/furElise";
 import { SONGS } from "@/songs";
 import { buildLaneSounds, buildSong, pitchFromName, pitchName, timeSong } from "@/songs/builder";
@@ -143,6 +144,55 @@ describe("Canon in D chart", () => {
     expect(chord.map((n) => pitchName(n.pitch)).sort()).toEqual(["A5", "D5", "F#5"]);
     expect(chord.every((n) => n.hold && n.durationBeats === 4)).toBe(true);
     expect(notes.filter((n) => n.chordGroup === null).some((n) => n.hold)).toBe(false);
+  });
+});
+
+describe("Moonlight Sonata chart", () => {
+  const notes = moonlightSonata.melody;
+  const p = (n: (typeof notes)[number]) => pitchName(n.pitch);
+  const bar = (i: number) => notes.slice(i * 12, i * 12 + 12).map(p);
+
+  it("bars 1–2: twelve triplet-eighths G#3 C#4 E4 per bar (C# minor figure)", () => {
+    const fig = ["G#3", "C#4", "E4"];
+    expect(bar(0)).toEqual([...fig, ...fig, ...fig, ...fig]);
+    expect(bar(1)).toEqual(bar(0));
+  });
+
+  it("bar 3 is A major then D major (A3 C#4 E4 ×2, A3 D4 F#4 ×2)", () => {
+    expect(bar(2)).toEqual([...Array(2).fill(["A3", "C#4", "E4"]).flat(), ...Array(2).fill(["A3", "D4", "F#4"]).flat()]);
+  });
+
+  it("bar 4 is the G#7 / C#m / C#sus2 / G#7 turn", () => {
+    expect(bar(3)).toEqual(["G#3", "C4", "F#4", "G#3", "C#4", "E4", "G#3", "C#4", "D#4", "F#3", "C4", "D#4"]);
+  });
+
+  it("the four-bar figure is played twice, then a held C# minor chord", () => {
+    expect(bar(4)).toEqual(bar(0));
+    expect(bar(7)).toEqual(bar(3));
+    const chord = notes.filter((n) => n.chordGroup !== null);
+    expect(chord.map(p).sort()).toEqual(["C#4", "E4", "G#4"]);
+    expect(chord.every((n) => n.hold)).toBe(true);
+    expect(notes.filter((n) => n.chordGroup === null).some((n) => n.hold)).toBe(false);
+  });
+
+  it("a pitch always sits on the same lane, and lanes follow pitch height", () => {
+    const lane = new Map<number, number>();
+    for (const n of notes) {
+      if (n.chordGroup !== null) continue;
+      expect(lane.get(n.pitch) ?? n.lane).toBe(n.lane);
+      lane.set(n.pitch, n.lane);
+    }
+    const byPitch = [...lane.entries()].sort((a, b) => a[0] - b[0]);
+    for (let i = 1; i < byPitch.length; i++) expect(byPitch[i][1]).toBeGreaterThanOrEqual(byPitch[i - 1][1]);
+  });
+
+  it("left-hand octaves follow C# – B – A / F# – G# G# – (repeat)", () => {
+    const low = moonlightSonata.accompaniment.filter((a) => a.pitch < 40).map((a) => [pitchName(a.pitch), a.startBeat]);
+    expect(low.slice(0, 6)).toEqual([["C#2", 0], ["B1", 4], ["A1", 8], ["F#1", 10], ["G#1", 12], ["G#1", 14]]);
+  });
+
+  it("is played softly", () => {
+    expect(notes.every((n) => n.velocity < 0.7)).toBe(true);
   });
 });
 

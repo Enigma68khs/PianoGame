@@ -10,7 +10,7 @@ A browser piano rhythm game (keyboard on desktop, touch on phones). Four tile la
 
 The game never stops for mistakes; when the song ends you get a result screen with accuracy and a full note-by-note log.
 
-> **Music data caveat (please read):** the Für Elise and Canon in D charts are *hand transcriptions* made for this project. It has **not** been proof-read against an Urtext/Henle/IMSLP edition. See [Music data provenance](#music-data-provenance).
+> **Music data caveat (please read):** the Für Elise, Canon in D and Moonlight Sonata charts are *hand transcriptions* made for this project. It has **not** been proof-read against an Urtext/Henle/IMSLP edition. See [Music data provenance](#music-data-provenance).
 
 ## Run it
 
@@ -27,7 +27,7 @@ Checks:
 
 ```bash
 npm run typecheck    # tsc --noEmit
-npm test             # 65 unit tests (vitest)
+npm test             # 81 unit tests (vitest)
 # browser end-to-end (real Chrome, real AudioContext). Needs Google Chrome installed (set CHROME_PATH otherwise):
 npm run build && npx next start -p 3100 &
 BASE_URL=http://localhost:3100 npm run test:e2e          # desktop keyboard flow
@@ -91,7 +91,8 @@ src/
     builder.ts          chart DSL → SongData, beats → seconds per difficulty, wrong-note tables
     furElise.ts         chart: Für Elise (data only)
     canonInD.ts         chart: Canon in D (data only)
-    index.ts            catalog (Für Elise and Canon in D playable, others "Coming Soon")
+    moonlightSonata.ts  chart: Moonlight Sonata, opening bars (data only)
+    index.ts            catalog (Für Elise, Canon in D and Moonlight Sonata playable; Clair de Lune is "Coming Soon")
   lib/storage.ts        localStorage wrapper
 tests/                  vitest unit tests
 e2e/run.mjs             Chrome end-to-end script (playwright-core)
@@ -117,14 +118,25 @@ Adding a song = adding one data file next to `furElise.ts` (melody tokens `pitch
 - **Accompaniment:** the ground bass plus a quiet broken chord, all below G4 (a test checks it never duplicates a melody pitch).
 - Each song has its own animated background (Für Elise: moonlit hall; Canon in D: sunrise hall) — `src/engine/backgrounds.ts`.
 
+### Moonlight Sonata (1st movement)
+
+- **Composition:** Ludwig van Beethoven, Piano Sonata No. 14 "Moonlight", Op. 27 No. 2 — public domain. Chart: `src/songs/moonlightSonata.ts`; no third-party MIDI/score/sample used.
+- **What it is:** an *excerpt arrangement* (~40 s at Normal, ♩ = 54): the right-hand **triplet arpeggios of the famous opening four bars** (bar 1–2 C♯ minor `G♯3 C♯4 E4`, bar 3 A major then D major `A3 C♯4 E4 / A3 D4 F♯4`, bar 4 G♯7–C♯m–C♯sus2–G♯7), played twice over the left-hand octave bass (C♯ – B – A / F♯ – G♯ G♯), closing on a held C♯-minor chord. **The singing melody that enters in bar 5 is not included, so this is not the complete movement.**
+- **Verification level:** the pitches of bars 1–4 (figure and bass) were checked against a published harmonic study of the movement (B. Hamann, UC Davis, which gives the notes in its own letter notation); I could not check them against the score itself. Everything after bar 4 is just the repeat described above.
+- **Fixed pitch→lane table:** F♯3 G♯3 A3 → A · C4 C♯4 → S · D4 D♯4 → K · E4 F♯4 G♯4 → L. Played softly (velocity 0.62). Background: moonlit lake.
+
+### Clair de Lune — not implemented
+
+Debussy's *Clair de lune* (public-domain composition) is still a "Coming Soon" card. I could not obtain note-level data I can trust: the web sources I could reach (tutorials, analyses) describe key, chords and form but do not list the notes, and I am not willing to guess a famous melody from memory — the spec forbids presenting an imprecise imitation as the real piece. To add it, provide the notes from a source you are allowed to use (a score you own, a public-domain MIDI you have verified, or the letter notes of the right hand), and it only needs one new file next to the other charts.
+
 ## Test results
 
 | Check | Result |
 |---|---|
 | `npm run typecheck` | pass |
 | `npm run build` | pass |
-| `npm test` (65 unit tests: judging windows, wrong-note mapping, no auto-correction, misses are silent, chords, holds, full-song simulations for every song — perfect / all-wrong / silent —, clock pause/resume, key-repeat, simultaneous keys, stats, chart integrity and Canon-specific checks) | 65 / 65 pass |
-| `npm run test:e2e` (real Chrome, 38 checks) | 38 / 38 pass |
+| `npm test` (81 unit tests: judging windows, wrong-note mapping, no auto-correction, misses are silent, chords, holds, full-song simulations for every song — perfect / all-wrong / silent —, clock pause/resume, key-repeat, simultaneous keys, stats, chart integrity and Canon-specific checks) | 81 / 81 pass |
+| `npm run test:e2e` (real Chrome, 41 checks) | 41 / 41 pass |
 | `npm run test:e2e:mobile` (emulated iPhone 13, portrait + landscape, real CDP touch incl. two fingers at once: layout, touch hit with correct pitch, multi-touch, pause/resume by tap, results screen) | 28 / 28 pass |
 
 What the E2E run verifies in a real browser: menu renders; `AudioContext` is running after Start; countdown; Space/Esc pause freezes song time (±1 ms) and resume continues from the same position; `R` asks for confirmation, Esc cancels, Enter restarts with a cleared log; key auto-repeat produces one input; **measured on the synth output with an `AnalyserNode`: the correct key makes E5 (659 Hz) the loudest pitch, the wrong key makes D♯5 sound while E5 stays absent afterwards, and an unplayed note is silent**; a scripted autopilot plays the whole song with deliberate wrong keys and skipped notes (game keeps running, counts match the plan, mean input error 6 ms), the results screen and log appear, replay starts, Play Again works, reload returns to a working menu; no console errors.
@@ -141,7 +153,7 @@ What the E2E run verifies in a real browser: menu renders; `AudioContext` is run
 ## Not implemented / known limitations
 
 - Chart not proof-read against an Urtext; only an excerpt of the piece; tempo slowed.
-- Two playable excerpts (others are "Coming Soon" cards).
+- Three playable excerpts; Clair de Lune is still "Coming Soon" (see above).
 - Piano is synthesized, not sampled; no sustain pedal, no velocity layers.
 - A Hold that is still held when you pause is treated as released at the pause position.
 - Keys pressed when nothing is due (including during the lead-in before the first tile) count as stray Wrong Notes by design.

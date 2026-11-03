@@ -1,8 +1,9 @@
 import type { SongData } from "@/engine/types";
 import { canonInD } from "./canonInD";
 import { furElise } from "./furElise";
+import { moonlightSonata } from "./moonlightSonata";
 
-export const SONGS: SongData[] = [furElise, canonInD];
+export const SONGS: SongData[] = [furElise, canonInD, moonlightSonata];
 
 export interface SongCatalogEntry {
   id: string;
@@ -15,8 +16,8 @@ export interface SongCatalogEntry {
 export const CATALOG: SongCatalogEntry[] = [
   { id: furElise.id, title: furElise.title, composer: furElise.composer, available: true },
   { id: canonInD.id, title: canonInD.title, composer: canonInD.composer, available: true },
+  { id: moonlightSonata.id, title: moonlightSonata.title, composer: moonlightSonata.composer, available: true },
   { id: "clair-de-lune", title: "Clair de Lune", composer: "Claude Debussy", available: false },
-  { id: "moonlight", title: "Moonlight Sonata", composer: "Ludwig van Beethoven", available: false },
 ];
 
 export function getSong(id: string): SongData | undefined {

@@ -301,9 +301,144 @@ function moonlitHall(variant: "moon" | "dawn" = "moon"): Background {
   };
 }
 
+
+/**
+ * "Moonlit lake" — made for the Moonlight Sonata: a huge moon over a still lake, its reflection shimmering
+ * in time with the music, distant mountains, drifting mist and slowly rising notes.
+ */
+function moonlitLake(): Background {
+  const rnd = seeded(77123);
+  const stars = Array.from({ length: 140 }, () => ({ x: rnd(), y: rnd() * 0.55, r: 0.5 + rnd() * 1.3, tw: 0.6 + rnd() * 2, ph: rnd() * 6.28 }));
+  const notes = Array.from({ length: 10 }, (_, i) => ({
+    side: i % 2, u: rnd(), off: rnd(), speed: 0.02 + rnd() * 0.02, glyph: GLYPHS[i % 4], size: 22 + rnd() * 20, sway: rnd() * 6.28, color: LANE_COLORS[i % 4],
+  }));
+  const mist = [
+    { y: 0.5, speed: 5, w: 0.8, a: 0.07, off: 0.2 },
+    { y: 0.58, speed: -3, w: 0.9, a: 0.06, off: 0.7 },
+  ];
+  return {
+    draw(ctx, L, s) {
+      const { W, H, fieldX, fieldW } = L;
+      const { now, beat, energy } = s;
+      const horizon = H * 0.6;
+      const rightX = fieldX + fieldW;
+      const sky = ctx.createLinearGradient(0, 0, 0, horizon);
+      sky.addColorStop(0, "#030818");
+      sky.addColorStop(0.6, "#0b1a3a");
+      sky.addColorStop(1, "#1c3b5c");
+      ctx.fillStyle = sky;
+      ctx.fillRect(0, 0, W, horizon);
+      for (const st of stars) {
+        ctx.globalAlpha = 0.25 + 0.75 * (0.5 + 0.5 * Math.sin(now * st.tw + st.ph));
+        ctx.fillStyle = "#e6f0ff";
+        ctx.beginPath();
+        ctx.arc(st.x * W, st.y * H, st.r, 0, 6.2832);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+
+      // moon
+      const mr = Math.min(96, H * 0.12);
+      const mx = W - rightX > 150 ? rightX + (W - rightX) / 2 : W * 0.5; // beside the lanes when there is room
+      const my = horizon * 0.42;
+      const haloR = mr * (3.6 + 0.5 * beat + 0.6 * energy);
+      const halo = ctx.createRadialGradient(mx, my, mr * 0.5, mx, my, haloR);
+      halo.addColorStop(0, `rgba(200,225,255,${0.4 + 0.2 * beat + 0.1 * energy})`);
+      halo.addColorStop(1, "rgba(200,225,255,0)");
+      ctx.fillStyle = halo;
+      ctx.fillRect(mx - haloR, my - haloR, haloR * 2, haloR * 2);
+      const disc = ctx.createRadialGradient(mx - mr * 0.3, my - mr * 0.3, mr * 0.1, mx, my, mr);
+      disc.addColorStop(0, "#ffffff");
+      disc.addColorStop(1, "#cfe0f7");
+      ctx.fillStyle = disc;
+      ctx.beginPath();
+      ctx.arc(mx, my, mr, 0, 6.2832);
+      ctx.fill();
+      ctx.fillStyle = "rgba(120,140,185,0.18)";
+      for (const [dx, dy, r] of [[-0.3, -0.1, 0.2], [0.28, 0.2, 0.14], [0.05, -0.42, 0.1]]) {
+        ctx.beginPath();
+        ctx.arc(mx + dx * mr, my + dy * mr, r * mr, 0, 6.2832);
+        ctx.fill();
+      }
+
+      // distant mountains (left and right of centre)
+      ctx.fillStyle = "#050d1e";
+      ctx.beginPath();
+      ctx.moveTo(0, horizon);
+      ctx.lineTo(0, horizon - H * 0.12);
+      ctx.lineTo(W * 0.1, horizon - H * 0.2);
+      ctx.lineTo(W * 0.22, horizon - H * 0.09);
+      ctx.lineTo(W * 0.3, horizon - H * 0.14);
+      ctx.lineTo(W * 0.4, horizon);
+      ctx.lineTo(W * 0.62, horizon);
+      ctx.lineTo(W * 0.72, horizon - H * 0.1);
+      ctx.lineTo(W * 0.82, horizon - H * 0.19);
+      ctx.lineTo(W * 0.92, horizon - H * 0.08);
+      ctx.lineTo(W, horizon - H * 0.15);
+      ctx.lineTo(W, horizon);
+      ctx.closePath();
+      ctx.fill();
+
+      // lake
+      const lake = ctx.createLinearGradient(0, horizon, 0, H);
+      lake.addColorStop(0, "#10294a");
+      lake.addColorStop(1, "#050c1c");
+      ctx.fillStyle = lake;
+      ctx.fillRect(0, horizon, W, H - horizon);
+
+      // moon reflection: shimmering strips that widen/brighten with the beat and the combo
+      const strips = 26;
+      for (let i = 0; i < strips; i++) {
+        const t = i / strips;
+        const y = horizon + 4 + t * (H - horizon - 8);
+        const h = 2 + t * 5;
+        const wob = Math.sin(now * 1.4 + i * 1.7) * (6 + t * 26);
+        const w = mr * (1.6 - t * 0.7) * (1 + 0.25 * beat) * (0.6 + 0.4 * Math.sin(now * 2 + i));
+        ctx.fillStyle = `rgba(210,230,255,${(0.34 - t * 0.2) * (0.7 + 0.3 * beat + 0.3 * energy)})`;
+        ctx.fillRect(mx + wob - w / 2, y, w, h);
+      }
+
+      // mist
+      for (const m of mist) {
+        const mw = W * m.w;
+        const x = ((((m.off * (W + mw) + now * m.speed) % (W + mw)) + (W + mw)) % (W + mw)) - mw;
+        const g = ctx.createRadialGradient(x + mw / 2, m.y * H, 4, x + mw / 2, m.y * H, mw / 2);
+        g.addColorStop(0, `rgba(170,200,235,${m.a})`);
+        g.addColorStop(1, "rgba(170,200,235,0)");
+        ctx.fillStyle = g;
+        ctx.save();
+        ctx.translate(x + mw / 2, m.y * H);
+        ctx.scale(1, 0.2);
+        ctx.translate(-(x + mw / 2), -m.y * H);
+        ctx.fillRect(x, m.y * H - mw / 2, mw, mw);
+        ctx.restore();
+      }
+
+      // rising notes
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      for (const n of notes) {
+        const prog = (((n.off + now * n.speed) % 1) + 1) % 1;
+        const lo = n.side === 0 ? 0 : rightX;
+        const hi = n.side === 0 ? fieldX : W;
+        const range = hi - lo;
+        const x = range > 80 ? lo + range * (0.15 + 0.7 * n.u) : W * (n.side === 0 ? 0.08 : 0.92);
+        ctx.globalAlpha = Math.sin(prog * Math.PI) * (0.4 + 0.3 * energy + 0.25 * beat);
+        ctx.fillStyle = rgba(n.color, 1);
+        ctx.font = `${n.size * (1 + 0.1 * beat)}px ${GLYPH_FONT}`;
+        ctx.fillText(n.glyph, x + Math.sin(now * 0.7 + n.sway) * 16, H * (1.05 - prog * 1.15));
+      }
+      ctx.globalAlpha = 1;
+      ctx.textAlign = "start";
+      ctx.textBaseline = "alphabetic";
+    },
+  };
+}
+
 const THEMES: Record<string, () => Background> = {
   "fur-elise": () => moonlitHall("moon"),
   "canon-in-d": () => moonlitHall("dawn"),
+  "moonlight-sonata": moonlitLake,
 };
 
 /** Background for a song; unknown songs fall back to the moonlit hall. */
