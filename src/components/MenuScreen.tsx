@@ -49,6 +49,9 @@ function Logo() {
           Piano<span className="bg-gradient-to-r from-violet-400 to-pink-400 bg-clip-text text-transparent">Game</span>
         </h1>
         <p className="mt-1 text-sm text-violet-200/70">네 개의 키로 연주하는 클래식 · MVP v0.1</p>
+        <p className="mt-1 text-xs font-semibold text-pink-200/90 sm:text-sm" data-testid="dedication">
+          💜 사랑하는 소년, 주원 주찬을 위해 만들었습니다
+        </p>
       </div>
     </div>
   );

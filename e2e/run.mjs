@@ -31,6 +31,7 @@ const waitState = (s, timeout = 20000) => page.waitForFunction((s) => window.__p
 await page.goto(BASE);
 await page.waitForSelector("text=Start Game");
 check("menu renders (logo, song card, difficulty, volume, Start)", (await page.locator("text=Für Elise").count()) > 0 && (await page.locator("text=Coming Soon").count()) > 0);
+check("menu title shows the dedication", (await page.getByTestId("dedication").innerText()).includes("사랑하는 소년, 주원 주찬을 위해 만들었습니다"));
 await page.screenshot({ path: "e2e/shots/1-menu.png" });
 
 await page.getByRole("radio", { name: /Hard/ }).click(); // shortest run
