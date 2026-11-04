@@ -278,6 +278,70 @@ for (const [label, firstPitch, firstLane] of [["Ode to Joy", 64, 2], ["Twinkle T
   check(`${label} loads (first note MIDI ${firstPitch} on lane ${firstLane})`, info.p === firstPitch && info.l === firstLane && info.count > 20, JSON.stringify(info));
 }
 
+// ── 11. latency calibration: a deliberately late player gets compensated ───────────────────────────
+// A press 0.1 s after the first note is only "Great" (Perfect needs ≤ 0.06 s). After calibrating a player who taps
+// ~75 ms late, the same press must be judged Perfect.
+async function latePressJudgement() {
+  await page.goto(BASE);
+  await page.waitForSelector("text=Start Game");
+  await page.getByRole("button", { name: /Für Elise/ }).click();
+  await page.getByRole("radio", { name: /Hard/ }).click();
+  await page.keyboard.press("Space");
+  await page.waitForFunction(() => window.__pianoGame?.getState() === "READY");
+  await waitState("PLAYING");
+  return api(() => new Promise((resolve) => {
+    const g = window.__pianoGame;
+    const n = g.getNotes()[0];
+    const f = () => {
+      if (g.getSongTime() >= n.time + 0.1) {
+        window.dispatchEvent(new KeyboardEvent("keydown", { code: g.lanes[n.lane], bubbles: true }));
+        resolve({ j: g.getEvents()[0]?.judgement, off: g.getInputOffset(), err: g.getEvents()[0]?.timingErrorMs });
+      } else requestAnimationFrame(f);
+    };
+    f();
+  }));
+}
+const control = await latePressJudgement();
+check("without calibration a press 0.1 s late is only Great (offset 0)", control.j === "great" && control.off === 0, JSON.stringify(control));
+
+await page.goto(BASE);
+await page.waitForSelector("text=Start Game");
+await page.getByTestId("open-calibration").click();
+await page.waitForSelector("text=입력 지연 보정");
+await page.screenshot({ path: "e2e/shots/10-calibration-intro.png" });
+await page.keyboard.press("Space"); // Space starts the click track (and is the user gesture for audio)
+await page.waitForFunction(() => window.__pianoCalib?.phase() === "running");
+check("calibration starts on Space (clicks scheduled on the audio clock)", (await api(() => window.__pianoCalib.clicks().length)) === 12);
+// in-page "player": taps ~75 ms after each click, like someone with a laggy setup
+await api(() => new Promise((resolve) => {
+  const c = window.__pianoCalib;
+  const clicks = c.clicks();
+  let i = 0;
+  const f = () => {
+    while (i < clicks.length && c.now() >= clicks[i] + 0.075) {
+      window.dispatchEvent(new KeyboardEvent("keydown", { code: ["KeyA", "KeyS", "KeyK", "KeyL"][i % 4], bubbles: true }));
+      i++;
+    }
+    if (i < clicks.length) requestAnimationFrame(f); else resolve();
+  };
+  f();
+}));
+await page.getByTestId("cal-result").waitFor({ timeout: 8000 });
+await page.screenshot({ path: "e2e/shots/11-calibration-result.png" });
+const draftText = await page.getByTestId("cal-draft").innerText();
+const draft = Number(draftText.replace("−", "-").replace("ms", ""));
+check("calibration measures the ~75 ms lag → offset ≈ −75 ms", draft <= -65 && draft >= -110, draftText);
+await page.getByRole("button", { name: "+5ms" }).click();
+check("±5 ms fine-tune buttons adjust the value", Number((await page.getByTestId("cal-draft").innerText()).replace("−", "-").replace("ms", "")) === draft + 5);
+await page.getByRole("button", { name: "-5ms" }).click();
+await page.getByTestId("cal-apply").click();
+await page.waitForSelector("text=Start Game");
+check("applying returns to the menu showing the saved offset", (await page.getByTestId("offset-label").innerText()).includes(String(Math.abs(draft))));
+check("the offset is persisted (localStorage)", (await api(() => JSON.parse(localStorage.getItem("pianogame.v1")).inputOffsetMs)) === draft);
+
+const calibrated = await latePressJudgement();
+check("after calibration the same late press is judged Perfect (offset applied to input time)", calibrated.j === "perfect" && Math.abs(calibrated.off * 1000 - draft) < 0.5, JSON.stringify(calibrated));
+
 check("no console/page errors", errors.length === 0, errors.slice(0, 3).join(" | "));
 await browser.close();
 

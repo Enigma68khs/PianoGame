@@ -8,11 +8,12 @@ import { loadPrefs, saveBest, savePrefs, type BestRecord } from "@/lib/storage";
 import { getSong, setPrivateSongs, type SongCatalogEntry } from "@/songs";
 import { loadPrivateSongs, type PrivateResult } from "@/songs/privateSongs";
 import { registerSongTheme } from "@/engine/backgrounds";
+import CalibrationScreen from "./CalibrationScreen";
 import GameScreen from "./GameScreen";
 import MenuScreen from "./MenuScreen";
 import ResultsScreen from "./ResultsScreen";
 
-type Screen = "menu" | "game" | "results";
+type Screen = "menu" | "game" | "results" | "calibrate";
 
 export interface RunSummary {
   result: GameResult;
@@ -25,6 +26,7 @@ export default function GameApp() {
   const [songId, setSongId] = useState("fur-elise");
   const [difficulty, setDifficulty] = useState<Difficulty>("normal");
   const [volume, setVolume] = useState(0.8);
+  const [inputOffsetMs, setInputOffsetMs] = useState(0); // latency correction from the calibration screen
   const [run, setRun] = useState<RunSummary | null>(null);
   // bumps on every (re)start so GameScreen remounts with a fresh controller
   const [runKey, setRunKey] = useState(0);
@@ -37,6 +39,7 @@ export default function GameApp() {
     const p = loadPrefs();
     setVolume(p.volume);
     setDifficulty(p.difficulty);
+    setInputOffsetMs(p.inputOffsetMs);
     if (getSong(p.songId)) setSongId(p.songId);
   }, []);
 
@@ -92,6 +95,7 @@ export default function GameApp() {
         song={song}
         difficulty={difficulty}
         volume={volume}
+        inputOffsetMs={inputOffsetMs}
         onVolumeChange={changeVolume}
         onExit={() => setScreen("menu")}
         onComplete={(result) => {
@@ -104,6 +108,20 @@ export default function GameApp() {
           setRun({ result, previousBest: previous, isNewBest });
           setScreen("results");
         }}
+      />
+    );
+  }
+
+  if (screen === "calibrate") {
+    return (
+      <CalibrationScreen
+        volume={volume}
+        offsetMs={inputOffsetMs}
+        onSave={(ms) => {
+          setInputOffsetMs(ms);
+          savePrefs({ inputOffsetMs: ms });
+        }}
+        onExit={() => setScreen("menu")}
       />
     );
   }
@@ -135,6 +153,8 @@ export default function GameApp() {
       volume={volume}
       onVolume={changeVolume}
       onStart={startGame}
+      inputOffsetMs={inputOffsetMs}
+      onCalibrate={() => setScreen("calibrate")}
     />
   );
 }

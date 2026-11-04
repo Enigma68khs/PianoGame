@@ -9,6 +9,8 @@ interface Props {
   song: SongData;
   difficulty: Difficulty;
   volume: number;
+  /** Input-latency correction (ms) from the calibration screen. */
+  inputOffsetMs?: number;
   onVolumeChange(v: number): void;
   onExit(): void;
   onComplete(r: GameResult): void;
@@ -39,7 +41,7 @@ function Stat({ label, value, accent, bump }: { label: string; value: string; ac
   );
 }
 
-export default function GameScreen({ song, difficulty, volume, onVolumeChange, onExit, onComplete }: Props) {
+export default function GameScreen({ song, difficulty, volume, inputOffsetMs = 0, onVolumeChange, onExit, onComplete }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const controllerRef = useRef<GameController | null>(null);
@@ -59,6 +61,7 @@ export default function GameScreen({ song, difficulty, volume, onVolumeChange, o
         song,
         difficulty,
         volume,
+        inputOffset: inputOffsetMs / 1000,
         canvas: canvasRef.current,
         onChange: setHud,
         onComplete: (r) => onCompleteRef.current(r),

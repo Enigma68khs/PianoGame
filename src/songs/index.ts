@@ -30,7 +30,7 @@ export const CATALOG: SongCatalogEntry[] = [
   { id: odeToJoy.id, title: odeToJoy.title, composer: odeToJoy.composer, available: true, level: 1 },
   { id: twinkleTwinkle.id, title: twinkleTwinkle.title, composer: twinkleTwinkle.composer, available: true, level: 1 },
   { id: jingleBells.id, title: jingleBells.title, composer: jingleBells.composer, available: true, level: 1 },
-  { id: midnightGroove.id, title: midnightGroove.title, composer: midnightGroove.composer, available: true, level: 2, original: true },
+  { id: midnightGroove.id, title: midnightGroove.title, composer: midnightGroove.composer, available: true, level: 1, original: true },
   { id: "clair-de-lune", title: "Clair de Lune", composer: "Claude Debussy", available: false },
 ];
 

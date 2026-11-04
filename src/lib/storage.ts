@@ -1,3 +1,4 @@
+import { clampOffsetMs } from "@/engine/calibration";
 import type { Difficulty } from "@/engine/types";
 
 const KEY = "pianogame.v1";
@@ -13,10 +14,12 @@ interface Persisted {
   volume: number;
   difficulty: Difficulty;
   songId: string;
+  /** Input-latency correction from the calibration screen, whole ms (negative = the player taps late). */
+  inputOffsetMs: number;
   best: Record<string, BestRecord>;
 }
 
-const DEFAULTS: Persisted = { volume: 0.8, difficulty: "normal", songId: "fur-elise", best: {} };
+const DEFAULTS: Persisted = { volume: 0.8, difficulty: "normal", songId: "fur-elise", inputOffsetMs: 0, best: {} };
 
 export function loadPrefs(): Persisted {
   try {
@@ -30,6 +33,7 @@ export function loadPrefs(): Persisted {
           ? parsed.difficulty
           : DEFAULTS.difficulty,
       songId: typeof parsed.songId === "string" ? parsed.songId : DEFAULTS.songId,
+      inputOffsetMs: typeof parsed.inputOffsetMs === "number" ? clampOffsetMs(parsed.inputOffsetMs) : 0,
       best: parsed.best && typeof parsed.best === "object" ? parsed.best : {},
     };
   } catch {

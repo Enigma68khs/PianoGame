@@ -4,7 +4,7 @@ import type { PianoSynth } from "@/audio/pianoSynth";
 import { pitchName, timeSong } from "@/songs/builder";
 import { SongClock } from "./clock";
 import { createBackground } from "./backgrounds";
-import { COUNTDOWN_SECONDS, DIFFICULTY, END_PADDING, FALL_TIME, JUDGE, LANES, LANE_COUNT } from "./constants";
+import { COUNTDOWN_SECONDS, DIFFICULTY, END_PADDING, FALL_TIME, LANES, LANE_COUNT } from "./constants";
 import { GameInput, type GameCommand } from "./input";
 import { Renderer } from "./renderer";
 import { PlaySession } from "./session";
@@ -53,6 +53,8 @@ export interface ControllerOptions {
   difficulty: Difficulty;
   volume: number;
   canvas: HTMLCanvasElement;
+  /** Seconds added to every input time (from the latency calibration; negative = the player taps late). Default 0. */
+  inputOffset?: number;
   onChange(h: HudSnapshot): void;
   onComplete(r: GameResult): void;
 }
@@ -84,11 +86,13 @@ export class GameController {
   /** pointerId → lane for every finger / mouse button currently held on the playfield. */
   private touchLanes = new Map<number, LaneIndex>();
   private readonly pulsePeriod: number;
+  private readonly inputOffset: number;
 
   private constructor(
     private readonly opts: ControllerOptions,
     private readonly synth: PianoSynth,
   ) {
+    this.inputOffset = opts.inputOffset ?? 0;
     this.timed = timeSong(opts.song, opts.difficulty);
     this.session = new PlaySession(this.timed);
     this.clock = new SongClock(() => synth.ctx.currentTime);
@@ -334,7 +338,7 @@ export class GameController {
   private laneDownEvent(lane: LaneIndex) {
     if (this.state === "PLAYING") {
       this.laneDown[lane] = true;
-      const t = this.clock.time() + JUDGE.INPUT_OFFSET;
+      const t = this.clock.time() + this.inputOffset;
       this.apply(this.session.press(lane, t), lane);
     } else if (this.state === "READY") {
       this.laneDown[lane] = true; // visual feedback only
@@ -344,7 +348,7 @@ export class GameController {
   private laneUpEvent(lane: LaneIndex) {
     this.laneDown[lane] = false;
     if (this.state === "PLAYING") {
-      this.apply(this.session.release(lane, this.clock.time() + JUDGE.INPUT_OFFSET), lane);
+      this.apply(this.session.release(lane, this.clock.time() + this.inputOffset), lane);
     }
   }
 
@@ -452,6 +456,7 @@ export class GameController {
       getStats: () => computeStats(this.session.events),
       getAudioTime: () => this.synth.ctx.currentTime,
       getAudioState: () => this.synth.ctx.state,
+      getInputOffset: () => this.inputOffset,
       lanes: LANES.map((l) => l.code),
       /** Taps the synth output so a test can measure what is actually being played. */
       probeStart: () => {

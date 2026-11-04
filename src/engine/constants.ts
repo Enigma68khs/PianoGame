@@ -22,8 +22,6 @@ export const JUDGE = {
   STRAY_REFERENCE: 0.6,
   /** Holds are "complete" when released within this of the note's end. */
   HOLD_END_TOLERANCE: 0.18,
-  /** Added to every input time (s). Positive if the player hears/sees things late. For calibration. */
-  INPUT_OFFSET: 0,
 } as const;
 
 export const SCORE = { perfect: 100, great: 70, wrong: 0, miss: 0 } as const;

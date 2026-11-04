@@ -187,3 +187,21 @@ describe("stats", () => {
     expect(gradeFor(20, 30, 30)).toBe("D");
   });
 });
+
+describe("storage: inputOffsetMs", () => {
+  it("defaults to 0, round-trips, and is clamped when the stored value is out of range", async () => {
+    const store: Record<string, string> = {};
+    (globalThis as unknown as { localStorage: Storage }).localStorage = {
+      getItem: (k: string) => store[k] ?? null,
+      setItem: (k: string, v: string) => void (store[k] = v),
+    } as Storage;
+    const { loadPrefs, savePrefs } = await import("@/lib/storage");
+    expect(loadPrefs().inputOffsetMs).toBe(0);
+    savePrefs({ inputOffsetMs: -48 });
+    expect(loadPrefs().inputOffsetMs).toBe(-48);
+    savePrefs({ inputOffsetMs: 9999 });
+    expect(loadPrefs().inputOffsetMs).toBe(250);
+    store["pianogame.v1"] = JSON.stringify({ inputOffsetMs: "oops" });
+    expect(loadPrefs().inputOffsetMs).toBe(0);
+  });
+});

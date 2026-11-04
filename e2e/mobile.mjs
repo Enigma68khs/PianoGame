@@ -42,7 +42,42 @@ for (const [name, viewport] of [
   check("menu: no horizontal overflow", !menu.hOverflow);
   check("menu: Start Game is visible without scrolling", menu.startTop >= 0 && menu.startBottom <= menu.vh && menu.startLeft >= 0 && menu.startRight <= menu.vw, `bottom ${Math.round(menu.startBottom)}/${menu.vh}`);
   check("menu: shows the touch-play hint on touch devices", menu.touchHint);
+  const tail = await api(() => {
+    const main = document.querySelector("main");
+    main.scrollTop = main.scrollHeight;
+    const bar = [...document.querySelectorAll("button")].find((x) => /Start Game/.test(x.textContent)).parentElement.getBoundingClientRect();
+    const panels = [...document.querySelectorAll("main .panel")];
+    const last = panels[panels.length - 1].getBoundingClientRect();
+    main.scrollTop = 0;
+    return { lastBottom: last.bottom, barTop: bar.top };
+  });
+  check("menu: the last panel is not hidden behind the fixed Start bar when scrolled to the end", tail.lastBottom <= tail.barTop + 1, `panel bottom ${Math.round(tail.lastBottom)} vs bar top ${Math.round(tail.barTop)}`);
   await page.screenshot({ path: `e2e/shots/m-${name}-1-menu.png` });
+
+  // ── latency calibration by touch ──
+  // centre it first: Playwright's minimal scroll would leave it under the fixed Start bar in short landscape screens
+  await page.getByTestId("open-calibration").evaluate((el) => el.scrollIntoView({ block: "center" }));
+  await page.getByTestId("open-calibration").tap();
+  await page.waitForSelector("text=입력 지연 보정");
+  const calLayout = await api(() => {
+    const pad = document.querySelector('[data-testid="tap-pad"]').getBoundingClientRect();
+    return { hOverflow: document.documentElement.scrollWidth > innerWidth + 1, padW: pad.width, padLeft: pad.left, padRight: pad.right, vw: innerWidth };
+  });
+  check("calibration: no horizontal overflow, tap pad fits the screen", !calLayout.hOverflow && calLayout.padLeft >= 0 && calLayout.padRight <= calLayout.vw, `pad ${Math.round(calLayout.padW)}px`);
+  await page.screenshot({ path: `e2e/shots/m-${name}-1b-calibration.png` });
+  await page.getByTestId("tap-pad").tap(); // the tap starts the click track and unlocks audio
+  await page.waitForFunction(() => window.__pianoCalib?.phase() === "running");
+  const calClicks = await api(() => window.__pianoCalib.clicks());
+  for (let i = 0; i < calClicks.length; i++) {
+    await page.waitForFunction(([t]) => window.__pianoCalib.now() >= t + 0.02, [calClicks[i]]);
+    await page.getByTestId("tap-pad").tap({ timeout: 2000 });
+  }
+  await page.getByTestId("cal-result").waitFor({ timeout: 8000 });
+  check("calibration: tapping the pad by touch produces a result", true, (await page.getByTestId("cal-draft").innerText()));
+  await page.screenshot({ path: `e2e/shots/m-${name}-1c-calibration-result.png` });
+  await page.getByTestId("cal-apply").tap();
+  await page.waitForSelector("text=Start Game");
+  check("calibration: applying returns to the menu", true);
 
   await page.getByRole("radio", { name: /Hard/ }).tap();
   await page.getByText("Start Game").tap();

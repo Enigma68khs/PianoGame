@@ -270,49 +270,51 @@ describe("Jingle Bells chart", () => {
   });
 });
 
-describe("Midnight Groove (original)", () => {
+describe("Midnight Groove (original, easy)", () => {
   const notes = midnightGroove.melody;
-  const SIXTEENTH = 0.25;
+  const solo = notes.filter((n) => n.chordGroup === null);
+  const names = (ns: typeof notes) => ns.map((n) => pitchName(n.pitch));
 
   it("is flagged as an original composition", () => {
     expect(midnightGroove.original).toBe(true);
     expect(midnightGroove.composer.toLowerCase()).toContain("original");
   });
 
-  it("bar 1 is the 3-3-2 tresillo: hits on beat 1, the 'and' of 2 and beat 4", () => {
+  it("opens with the hook on four steady quarter notes: A A C D", () => {
     const bar1 = notes.filter((n) => n.startBeat < 4);
-    expect(bar1.map((n) => n.startBeat)).toEqual([0, 6 * SIXTEENTH, 12 * SIXTEENTH]);
-    expect(bar1.map((n) => pitchName(n.pitch))).toEqual(["A4", "C5", "A4"]);
+    expect(bar1.map((n) => n.startBeat)).toEqual([0, 1, 2, 3]);
+    expect(names(bar1)).toEqual(["A4", "A4", "C5", "D5"]);
   });
 
-  it("the hook keeps the 3-3-2 rhythm in bars 1-4 and again in bars 9-12 (first three bars of each)", () => {
-    for (const bar of [0, 1, 2, 3, 8, 9, 10]) {
-      const hits = notes.filter((n) => n.startBeat >= bar * 4 && n.startBeat < (bar + 1) * 4).map((n) => n.startBeat - bar * 4);
-      expect(hits).toEqual([0, 1.5, 3]);
-    }
+  it("repeats the hook note for note in bars 9-12 (the tune you can remember)", () => {
+    const key = (from: number) =>
+      notes.filter((n) => n.startBeat >= from && n.startBeat < from + 16).map((n) => [n.startBeat - from, n.pitch, n.durationBeats]);
+    expect(key(32)).toEqual(key(0));
+    expect(key(0).length).toBe(14);
   });
 
-  it("uses only six pitches in A Phrygian, with automatic lanes that never put a pitch on two keys", () => {
-    const solo = notes.filter((n) => n.chordGroup === null);
-    expect(new Set(solo.map((n) => pitchName(n.pitch)))).toEqual(new Set(["A4", "A#4", "C5", "D5", "E5", "G5"])); // A#4 = B♭4
+  it("uses only four pitches, one per key: A4→A, C5→S, D5→K, E5→L", () => {
+    expect(names(solo).filter((v, i, a) => a.indexOf(v) === i).sort()).toEqual(["A4", "C5", "D5", "E5"]);
     const lane = new Map<number, number>();
-    for (const n of solo) {
+    for (const n of notes) {
       expect(lane.get(n.pitch) ?? n.lane).toBe(n.lane);
       lane.set(n.pitch, n.lane);
     }
-    expect([...new Set(notes.map((n) => n.lane))].sort()).toEqual([0, 1, 2, 3]);
+    expect([...lane.entries()].sort((x, y) => x[0] - y[0]).map(([, l]) => l)).toEqual([0, 1, 2, 3]);
   });
 
-  it("has two-key chord stabs in bars 13-14 and ends on a held three-key A minor chord", () => {
-    const stabs = notes.filter((n) => n.chordGroup !== null && n.startBeat >= 48 && n.startBeat < 56);
-    expect(stabs.length).toBe(12);
-    const last = notes.filter((n) => n.startBeat >= 60);
-    expect(last.map((n) => pitchName(n.pitch)).sort()).toEqual(["A4", "C5", "E5"]);
-    expect(last.every((n) => n.hold && n.durationBeats === 4)).toBe(true);
+  it("is easy to play: tunes start at least a beat apart and nothing but the ending is a hold", () => {
+    for (let i = 1; i < solo.length; i++) expect(solo[i].startBeat - solo[i - 1].startBeat).toBeGreaterThanOrEqual(1);
     expect(notes.filter((n) => n.startBeat < 60).some((n) => n.hold)).toBe(false);
   });
 
-  it("bass plays root, root, fifth on the same 3-3-2 hits and stays below the melody", () => {
+  it("ends on a held two-key chord, A4 + E5, for the whole last bar", () => {
+    const last = notes.filter((n) => n.startBeat >= 60);
+    expect(names(last).sort()).toEqual(["A4", "E5"]);
+    expect(last.every((n) => n.hold && n.durationBeats === 4 && n.chordGroup !== null)).toBe(true);
+  });
+
+  it("bass plays root, root, fifth on the 3-3-2 hits and stays below the melody", () => {
     const bar1 = midnightGroove.accompaniment.filter((a) => a.startBeat < 4).map((a) => [pitchName(a.pitch), a.startBeat]);
     expect(bar1).toEqual([["A2", 0], ["A2", 1.5], ["E3", 3]]);
     expect(Math.max(...midnightGroove.accompaniment.map((a) => a.pitch))).toBeLessThan(Math.min(...notes.map((n) => n.pitch)));

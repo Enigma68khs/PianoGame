@@ -2,70 +2,68 @@ import { buildSong, type ChartDef } from "./builder";
 
 /**
  * "Midnight Groove" — an ORIGINAL composition written for this project. It is not a transcription of, and does
- * not quote, any existing song; it only shares a mood with Brazilian-funk / phonk dance tracks: a dark minor
- * mode (A Phrygian: A B♭ C D E …), a short hypnotic hook and the "3-3-2" tresillo rhythm — three hits per bar,
- * spaced 3 + 3 + 2 eighth notes apart — carried by a pulsing bass.
+ * not quote, any existing song. It keeps a dark A-minor night-drive mood, but the tune itself is deliberately
+ * simple and singable so you can hear it as a song: four pitches only (A4 C5 D5 E5 — one per key, A S K L),
+ * mostly steady quarter notes, and one short hook that keeps coming back.
  *
- * 4/4, authored in sixteenth-note units (16 per bar). Lanes are assigned automatically from the six pitches
- * used (A4 B♭4 C5 D5 E5 G5): lowest → A … highest → L, a pitch always on the same key.
+ * 4/4, ♩ = 84, authored in eighth-note units (8 per bar). The bass underneath carries the groove: a "3-3-2"
+ * pattern (hits on beat 1, the "and" of 2 and beat 4) — the melody stays plain on top of it.
  *
- *   bars 1–4    the hook (3-3-2 hits) and its answer
- *   bars 5–8    a climbing eighth-note ladder with a sixteenth-note flourish
- *   bars 9–12   the hook again, higher
- *   bars 13–15  two-key chord stabs, then a run up to the top
- *   bar 16      a held A-minor chord (3 keys)
+ *   A  (bars 1–4)    the hook: A A C D / E D C — then the same start with an answer that settles on A
+ *   B  (bars 5–8)    a contrasting phrase that starts high: E E D C / D C A — repeated, ending on A
+ *   A  (bars 9–12)   the hook again, note for note
+ *   C  (bars 13–16)  a rising run, a falling run, a long E, and a held A + E to finish
  */
 
-// 3-3-2 hit patterns: a note on beat 1, one on the "and" of 2, one on beat 4, each followed by a gap
-const hit = (pitches: [string, string, string]) => [
-  `${pitches[0]}:3`, "R:3", `${pitches[1]}:3`, "R:3", `${pitches[2]}:2`, "R:2",
+const hook = (answer: string[]) => [
+  "A4:2", "A4:2", "C5:2", "D5:2", //  A  A  C  D
+  "E5:2", "D5:2", "C5:2", "R:2", //   E  D  C  .
+  "A4:2", "A4:2", "C5:2", "D5:2", //  A  A  C  D
+  ...answer,
 ];
 
 const melody = [
-  // A — the hook and its answer
-  ...hit(["A4", "C5", "A4"]),
-  ...hit(["Bb4", "A4", "E5"]),
-  ...hit(["A4", "C5", "E5"]),
-  ...hit(["D5", "C5", "Bb4"]),
-  // B — eighth-note ladder
-  "A4:2", "C5:2", "D5:2", "E5:2", "D5:2", "C5:2", "D5:2", "C5:2",
-  "Bb4:2", "C5:2", "D5:2", "C5:2", "Bb4:2", "A4:2", "Bb4:2", "A4:2",
-  "A4:1", "C5:1", "E5:2", "G5:3", "R:1", "E5:2", "D5:2", "C5:2", "A4:2",
-  "G5:3", "R:1", "E5:3", "R:1", "D5:2", "C5:2", "Bb4:2", "A4:2",
-  // A' — the hook, higher
-  ...hit(["E5", "G5", "E5"]),
-  ...hit(["D5", "C5", "D5"]),
-  ...hit(["E5", "G5", "G5"]),
-  "E5:2", "D5:2", "C5:2", "Bb4:2", "A4:3", "R:1", "A4:2", "R:2",
-  // C — chord stabs and the run to the top
-  "A4+C5:3", "R:3", "A4+C5:3", "R:3", "C5+E5:2", "R:2",
-  "D5+G5:3", "R:3", "C5+E5:3", "R:3", "Bb4+D5:2", "R:2",
-  "A4:1", "A4:1", "C5:2", "E5:2", "G5:2", "E5:2", "C5:2", "A4:2", "R:2",
-  // end — held A-minor chord
-  "A4+C5+E5:16",
+  // A — the hook (bars 1–4)
+  ...hook(["C5:2", "A4:2", "A4:4"]), //            C  A  A——
+  // B — contrast (bars 5–8)
+  "E5:2", "E5:2", "D5:2", "C5:2", //               E  E  D  C
+  "D5:2", "C5:2", "A4:2", "R:2", //                D  C  A  .
+  "E5:2", "E5:2", "D5:2", "C5:2", //               E  E  D  C
+  "D5:2", "E5:2", "A4:4", //                       D  E  A——
+  // A — the hook again (bars 9–12)
+  ...hook(["C5:2", "A4:2", "A4:4"]),
+  // C — rising, falling, long E, then the closing pair (bars 13–16)
+  "A4:2", "C5:2", "D5:2", "E5:2", //               A  C  D  E
+  "E5:2", "D5:2", "C5:2", "A4:2", //               E  D  C  A
+  "C5:2", "D5:2", "E5:4", //                       C  D  E——
+  "A4+E5:8", //                                    A + E held for the whole last bar
 ];
 
-// Bass: root, root, then the fifth on beat 4 — [name, fifth] per bar
+// Bass: root, root, then the fifth on beat 4 — the 3-3-2 groove. [root, fifth] per bar.
+const A: [string, string] = ["A2", "E3"];
+const G: [string, string] = ["G2", "D3"];
+const E: [string, string] = ["E3", "B3"];
+const D: [string, string] = ["D3", "A3"];
 const BARS: [string, string][] = [
-  ["A2", "E3"], ["Bb2", "F3"], ["A2", "E3"], ["D3", "A3"],
-  ["A2", "E3"], ["Bb2", "F3"], ["A2", "E3"], ["E3", "B3"],
-  ["A2", "E3"], ["G2", "D3"], ["A2", "E3"], ["E3", "B3"],
-  ["A2", "E3"], ["D3", "A3"], ["E3", "B3"],
+  A, A, A, E, //  hook
+  G, G, A, E, //  contrast
+  A, A, A, E, //  hook again
+  A, D, E, //     run (bar 16 is the held chord, below)
 ];
 const accompaniment: string[] = [];
 BARS.forEach(([root, fifth], bar) => {
-  const s = bar * 16;
-  accompaniment.push(`${root}@${s}:3`, `${root}@${s + 6}:3`, `${fifth}@${s + 12}:2`);
+  const s = bar * 8;
+  accompaniment.push(`${root}@${s}:3`, `${root}@${s + 3}:3`, `${fifth}@${s + 6}:2`);
 });
-accompaniment.push("A2@240:16", "E3@240:16"); // bar 16: held under the chord
+accompaniment.push("A2@120:8", "E3@120:8"); // bar 16: held under the closing chord
 
 const def: ChartDef = {
   id: "midnight-groove",
   title: "Midnight Groove",
   composer: "PianoGame (original)",
-  bpm: 92,
-  unit: 0.25,
-  holdMinBeats: 2, // only the closing chord is held
+  bpm: 84,
+  unit: 0.5,
+  holdMinBeats: 3, // only the closing chord is held; the half notes are plain tiles
   velocity: 0.86,
   accompanimentVelocity: 0.55,
   melody,
@@ -74,7 +72,7 @@ const def: ChartDef = {
   source:
     "Original composition written for this project; not derived from, and not quoting, any existing song or recording.",
   coverage:
-    "A complete original piece (~42 s at Normal) in the mood of a Brazilian-funk / phonk night: dark A-Phrygian hook on the 3-3-2 rhythm, a climbing ladder, chord stabs and a closing A-minor chord.",
+    "A complete, easy original piece (~46 s at Normal): a four-note A-minor hook (A C D E) on steady quarter notes, a contrasting phrase, the hook again, and a held A + E ending, over a grooving bass.",
 };
 
 export const midnightGroove = buildSong(def);

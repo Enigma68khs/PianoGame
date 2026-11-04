@@ -27,7 +27,7 @@ Checks:
 
 ```bash
 npm run typecheck    # tsc --noEmit
-npm test             # 142 unit tests (vitest)
+npm test             # 155 unit tests (vitest)
 # browser end-to-end (real Chrome, real AudioContext). Needs Google Chrome installed (set CHROME_PATH otherwise):
 npm run build && npx next start -p 3100 &
 BASE_URL=http://localhost:3100 npm run test:e2e          # desktop keyboard flow
@@ -69,7 +69,8 @@ Touch the lane columns (or the A S K L pads) with your fingers: every finger is 
 - **Accompaniment** is a separate auto-played track that never contains the player's melody pitches (checked by a test).
 - **Performance log** per input: song time, key, target pitch, played pitch, judgement, timing error (ms), note length / held time. Stats are a pure function of this log.
 - **Replay of your performance** from the log (wrong notes stay wrong, missed notes stay missing).
-- Preferences (volume, difficulty, song) and best score per song/difficulty in `localStorage`.
+- **Input-latency calibration** (menu → "보정하기"): a click track plays on the audio clock (4 count-in clicks, then 12 you tap along with using A S K L / Space / a touch on the pad). The median difference between your taps and the clicks is stored as `inputOffsetMs` (−250…+250 ms; negative = you tap late) and added to every input time while judging, so a note you hit exactly "in your feel of the beat" is judged on the beat. Outlier taps are trimmed, the screen reports how steady you were, and you can fine-tune ±5 ms or reset. Logic: `src/engine/calibration.ts` (pure, unit-tested); UI: `src/components/CalibrationScreen.tsx`.
+- Preferences (volume, difficulty, song, input offset) and best score per song/difficulty in `localStorage`.
 
 ## Project structure
 
@@ -142,10 +143,10 @@ None of them is the complete piece in the full sense (just the tune/theme/chorus
 
 ### Midnight Groove — an original piece
 
-Written for this project; **not a transcription and not based on any existing song or recording** (it only shares a mood with Brazilian-funk / phonk dance tracks). ♩ = 92, ~42 s at Normal, `src/songs/midnightGroove.ts`:
-- **Mode and rhythm:** dark A Phrygian (A B♭ C D E G) and the 3-3-2 *tresillo* — three hits per bar, 3 + 3 + 2 eighth notes apart. The bass plays root, root, fifth on the same hits.
-- **Form:** hook (bars 1–4) → climbing eighth-note ladder with a sixteenth-note flourish (5–8) → hook again, higher (9–12) → two-key chord stabs and a run to the top (13–15) → a held three-key A-minor chord (16).
-- **Lanes:** assigned automatically from its six pitches (the same feature private songs use), so a pitch always sits on the same key. Background: "neon night" — striped sun, skyline, a perspective grid and beat-driven equalizer bars. Card badge: ORIGINAL.
+Written for this project; **not a transcription and not based on any existing song or recording**. It keeps a dark A-minor night-drive mood, but the tune is deliberately simple and singable. ♩ = 84, ~46 s at Normal, `src/songs/midnightGroove.ts` (★ easy):
+- **Notes:** only four pitches — A4 C5 D5 E5 — one per key (A S K L), steady quarter notes; the only Hold is the closing chord.
+- **Form:** hook "A A C D / E D C" and its answer (bars 1–4) → a contrasting phrase starting high, "E E D C / D C A", repeated (5–8) → the hook again, note for note (9–12) → a rising run, a falling run, a long E and a held A + E (13–16).
+- **Groove:** the bass keeps the 3-3-2 pattern (hits on beat 1, the "and" of 2 and beat 4) while the melody stays plain on top. Background: "neon night" — striped sun, skyline, a perspective grid and beat-driven equalizer bars. Card badge: ORIGINAL.
 
 ### Clair de Lune — not implemented
 
@@ -166,16 +167,16 @@ For a song you transcribed yourself but must **not** publish — e.g. a modern c
 |---|---|
 | `npm run typecheck` | pass |
 | `npm run build` | pass |
-| `npm test` (142 unit tests: judging windows, wrong-note mapping, no auto-correction, misses are silent, chords, holds, full-song simulations for every song — perfect / all-wrong / silent —, clock pause/resume, key-repeat, simultaneous keys, stats, chart integrity and Canon-specific checks) | 142 / 142 pass |
-| `npm run test:e2e` (real Chrome, 45 checks) | 45 / 45 pass |
-| `npm run test:e2e:mobile` (emulated iPhone 13, portrait + landscape, real CDP touch incl. two fingers at once: layout, touch hit with correct pitch, multi-touch, pause/resume by tap, results screen) | 28 / 28 pass |
+| `npm test` (155 unit tests: judging windows, wrong-note mapping, no auto-correction, misses are silent, chords, holds, full-song simulations for every song — perfect / all-wrong / silent —, clock pause/resume, key-repeat, simultaneous keys, stats, chart integrity, Canon-specific checks, latency-calibration maths and offset persistence) | 155 / 155 pass |
+| `npm run test:e2e` (real Chrome, 52 checks, incl. calibration: a deliberately ~75 ms-late player is measured and the same late press changes from Great to Perfect) | 52 / 52 pass |
+| `npm run test:e2e:mobile` (emulated iPhone 13, portrait + landscape, real CDP touch incl. two fingers at once: layout, touch hit with correct pitch, multi-touch, pause/resume by tap, results screen, calibration by touch, last menu panel not hidden behind the Start bar) | all pass |
 
 What the E2E run verifies in a real browser: menu renders; `AudioContext` is running after Start; countdown; Space/Esc pause freezes song time (±1 ms) and resume continues from the same position; `R` asks for confirmation, Esc cancels, Enter restarts with a cleared log; key auto-repeat produces one input; **measured on the synth output with an `AnalyserNode`: the correct key makes E5 (659 Hz) the loudest pitch, the wrong key makes D♯5 sound while E5 stays absent afterwards, and an unplayed note is silent**; a scripted autopilot plays the whole song with deliberate wrong keys and skipped notes (game keeps running, counts match the plan, mean input error 6 ms), the results screen and log appear, replay starts, Play Again works, reload returns to a working menu; no console errors.
 
 ### Not verifiable by me (needs a human)
 
 - **How it sounds.** Pitch and silence were measured, but I could not listen to the timbre. The synthesizer is a plausible piano approximation, not a sampled piano.
-- **Perceived audio/visual sync and latency on your hardware.** The logic uses one clock, but speaker/Bluetooth output latency and screen latency vary; `JUDGE.INPUT_OFFSET` in `constants.ts` is the calibration knob (default 0).
+- **Perceived audio/visual sync and latency on your hardware.** The logic uses one clock, but speaker/Bluetooth output latency and screen latency vary. The calibration screen measures the *combined* delay of your setup from your own taps; it was verified with scripted taps (known 75 ms lag recovered, ±15 ms) and real CDP touches, but not with a real Bluetooth headset, and it cannot separate audio latency from your own habit — it only makes the judging consistent with how you actually tap.
 - **Real phones.** Touch was verified on an emulated iPhone in Chrome, not on real iOS Safari / Android devices (touch latency, the iOS silent-switch behaviour, multi-touch limits, notches and browser toolbars).
 - **Real keyboard feel** (ghosting on cheap keyboards when holding 3+ keys, IME behaviour with a physical Korean layout). Tests use synthetic `KeyboardEvent`s with the same `code`s.
 - Edge, Firefox, Safari (only Chrome was run). Fullscreen button (relies on a user gesture; not exercised headlessly).
@@ -188,13 +189,13 @@ What the E2E run verifies in a real browser: menu renders; `AudioContext` is run
 - Piano is synthesized, not sampled; no sustain pedal, no velocity layers.
 - A Hold that is still held when you pause is treated as released at the pause position.
 - Keys pressed when nothing is due (including during the lead-in before the first tile) count as stray Wrong Notes by design.
-- No latency calibration screen; touch controls are tested only on an emulated phone (see below); no accounts, ranking or backend (out of scope).
+- Latency calibration is a single global offset (no separate audio / visual split); touch controls are tested only on an emulated phone (see below); no accounts, ranking or backend (out of scope).
 
 ## Ideas for next versions
 
 1. Proof-read the chart against Urtext; add the full piece and more songs via a MIDI → chart importer that keeps the explicit `laneSounds` tables.
 2. Sampled piano (e.g., a properly licensed multi-sample set) behind the same `PianoSynth` interface.
-3. Latency calibration (tap test) writing `INPUT_OFFSET`; per-difficulty judgement windows.
+3. Per-difficulty judgement windows; separate visual-vs-audio latency calibration.
 4. Practice mode (slow/loop sections), per-bar accuracy heat-map in the results.
 5. Gamepad/touch input, key remapping UI.
 6. Worker-based audio scheduling so background-tab throttling never affects accompaniment.

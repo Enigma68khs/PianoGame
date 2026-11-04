@@ -17,6 +17,9 @@ interface Props {
   volume: number;
   onVolume(v: number): void;
   onStart(): void | Promise<void>;
+  /** Saved input-latency correction (ms). */
+  inputOffsetMs?: number;
+  onCalibrate?(): void;
 }
 
 const LANE_KEYS = [
@@ -51,7 +54,7 @@ function Logo() {
   );
 }
 
-export default function MenuScreen({ privateEntries = [], privateNotices = [], songId, onSong, difficulty, onDifficulty, volume, onVolume, onStart }: Props) {
+export default function MenuScreen({ privateEntries = [], privateNotices = [], songId, onSong, difficulty, onDifficulty, volume, onVolume, onStart, inputOffsetMs = 0, onCalibrate }: Props) {
   const [starting, setStarting] = useState(false);
   const startingRef = useRef(false);
   const onStartRef = useRef(onStart);
@@ -90,7 +93,7 @@ export default function MenuScreen({ privateEntries = [], privateNotices = [], s
 
   return (
     <main className="relative h-[100dvh] w-screen overflow-y-auto bg-[radial-gradient(ellipse_at_20%_0%,#2a1766_0%,#0c0a1c_45%,#07070f_100%)]">
-      <div className="mx-auto flex min-h-full max-w-6xl flex-col gap-6 px-4 py-6 max-lg:pb-28 sm:gap-8 sm:px-8 sm:py-10">
+      <div className="mx-auto flex min-h-full max-w-6xl flex-col gap-6 px-4 py-6 max-lg:pb-28! sm:gap-8 sm:px-8 sm:py-10">
         <header className="flex items-center justify-between">
           <Logo />
           <p className="hidden text-sm text-violet-200/60 md:block">
@@ -236,6 +239,23 @@ export default function MenuScreen({ privateEntries = [], privateNotices = [], s
                 <span className="w-10 text-right tabular-nums text-violet-100/80">{Math.round(volume * 100)}</span>
               </label>
             </div>
+
+            {onCalibrate && (
+              <div className="panel flex items-center justify-between gap-3 p-4">
+                <div className="text-xs leading-relaxed text-violet-100/75">
+                  <b className="text-violet-100">🎧 입력 지연 보정</b>
+                  <br />
+                  소리/판정이 어긋나게 느껴지면 측정해 보세요.
+                  <span className="ml-1 text-violet-300/70" data-testid="offset-label">
+                    현재 {inputOffsetMs > 0 ? "+" : inputOffsetMs < 0 ? "−" : ""}
+                    {Math.abs(inputOffsetMs)}ms
+                  </span>
+                </div>
+                <button onClick={onCalibrate} className="btn-ghost shrink-0 rounded-xl px-4 py-2 text-sm font-bold" data-testid="open-calibration">
+                  보정하기
+                </button>
+              </div>
+            )}
 
             <div className="mt-auto lg:sticky lg:bottom-6 lg:z-20 max-lg:fixed max-lg:inset-x-0 max-lg:bottom-0 max-lg:z-30 max-lg:bg-gradient-to-t max-lg:from-[#07070f] max-lg:via-[#07070f]/90 max-lg:to-transparent max-lg:px-4 max-lg:pb-[max(1rem,env(safe-area-inset-bottom))] max-lg:pt-6">
             <button
