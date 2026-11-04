@@ -268,7 +268,7 @@ await page.waitForTimeout(4000);
 await page.screenshot({ path: "e2e/shots/9-moonlight-playing.png" });
 
 // ── 10. the three simple songs are registered and load with the right first note ───────────────
-for (const [label, firstPitch, firstLane] of [["Ode to Joy", 64, 2], ["Twinkle Twinkle Little Star", 60, 0], ["Jingle Bells", 64, 2]]) {
+for (const [label, firstPitch, firstLane] of [["Ode to Joy", 64, 2], ["Twinkle Twinkle Little Star", 60, 0], ["Jingle Bells", 64, 2], ["Midnight Groove", 69, 0]]) {
   await page.goto(BASE);
   await page.waitForSelector("text=Start Game");
   await page.getByRole("button", { name: new RegExp(label) }).click();

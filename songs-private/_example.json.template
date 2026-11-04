@@ -1,0 +1,18 @@
+{
+  "id": "my-song",
+  "title": "My Song (original example melody)",
+  "composer": "me",
+  "bpm": 96,
+  "unit": 0.5,
+  "level": 1,
+  "holdMinBeats": 1.5,
+  "theme": "stars",
+  "melody": [
+    "C4:2", "E4:2", "G4:2", "E4:2",
+    "D4:2", "F4:2", "A4:2", "F4:2",
+    "E4:2", "G4:2", "C5:4",
+    "C5:2", "G4:2", "E4:2", "C4:2",
+    "C4+E4+G4:8"
+  ],
+  "accompaniment": []
+}

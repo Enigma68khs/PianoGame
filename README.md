@@ -10,7 +10,7 @@ A browser piano rhythm game (keyboard on desktop, touch on phones). Four tile la
 
 The game never stops for mistakes; when the song ends you get a result screen with accuracy and a full note-by-note log.
 
-> **Music data caveat (please read):** every chart (Für Elise, Canon in D, Moonlight Sonata, Ode to Joy, Twinkle Twinkle Little Star, Jingle Bells) is a *hand transcription* made for this project. It has **not** been proof-read against an Urtext/Henle/IMSLP edition. See [Music data provenance](#music-data-provenance).
+> **Music data caveat (please read):** every public-domain chart (Für Elise, Canon in D, Moonlight Sonata, Ode to Joy, Twinkle Twinkle Little Star, Jingle Bells) is a *hand transcription* made for this project, and **Midnight Groove is an original composition** written for it. It has **not** been proof-read against an Urtext/Henle/IMSLP edition. See [Music data provenance](#music-data-provenance).
 
 ## Run it
 
@@ -27,7 +27,7 @@ Checks:
 
 ```bash
 npm run typecheck    # tsc --noEmit
-npm test             # 116 unit tests (vitest)
+npm test             # 142 unit tests (vitest)
 # browser end-to-end (real Chrome, real AudioContext). Needs Google Chrome installed (set CHROME_PATH otherwise):
 npm run build && npx next start -p 3100 &
 BASE_URL=http://localhost:3100 npm run test:e2e          # desktop keyboard flow
@@ -97,7 +97,9 @@ src/
     canonInD.ts         chart: Canon in D (data only)
     moonlightSonata.ts  chart: Moonlight Sonata, opening bars (data only)
     odeToJoy.ts · twinkleTwinkle.ts · jingleBells.ts   charts: the three easy songs (data only)
-    index.ts            catalog (six songs playable with a ★ difficulty guide; Clair de Lune is "Coming Soon")
+    midnightGroove.ts   an original composition (data only)
+    privateSongs.ts     loader for local-only songs from songs-private/ (development only)
+    index.ts            catalog (seven songs playable with a ★ difficulty guide; Clair de Lune is "Coming Soon")
   lib/storage.ts        localStorage wrapper
 tests/                  vitest unit tests
 e2e/run.mjs             Chrome end-to-end script (playwright-core)
@@ -138,9 +140,25 @@ All three are public-domain melodies, hand-transcribed (no third-party MIDI/scor
 - **Jingle Bells** — the chorus twice (♩ = 112, ~36 s): C4 → A, D4 → S, E4 → K, F4 G4 → L; half and whole notes are Holds. The verses are not included.
 None of them is the complete piece in the full sense (just the tune/theme/chorus); the song cards show a rough difficulty guide (★).
 
+### Midnight Groove — an original piece
+
+Written for this project; **not a transcription and not based on any existing song or recording** (it only shares a mood with Brazilian-funk / phonk dance tracks). ♩ = 92, ~42 s at Normal, `src/songs/midnightGroove.ts`:
+- **Mode and rhythm:** dark A Phrygian (A B♭ C D E G) and the 3-3-2 *tresillo* — three hits per bar, 3 + 3 + 2 eighth notes apart. The bass plays root, root, fifth on the same hits.
+- **Form:** hook (bars 1–4) → climbing eighth-note ladder with a sixteenth-note flourish (5–8) → hook again, higher (9–12) → two-key chord stabs and a run to the top (13–15) → a held three-key A-minor chord (16).
+- **Lanes:** assigned automatically from its six pitches (the same feature private songs use), so a pitch always sits on the same key. Background: "neon night" — striped sun, skyline, a perspective grid and beat-driven equalizer bars. Card badge: ORIGINAL.
+
 ### Clair de Lune — not implemented
 
 Debussy's *Clair de lune* (public-domain composition) is still a "Coming Soon" card. I could not obtain note-level data I can trust: the web sources I could reach (tutorials, analyses) describe key, chords and form but do not list the notes, and I am not willing to guess a famous melody from memory — the spec forbids presenting an imprecise imitation as the real piece. To add it, provide the notes from a source you are allowed to use (a score you own, a public-domain MIDI you have verified, or the letter notes of the right hand), and it only needs one new file next to the other charts.
+
+## Private (local-only) songs
+
+For a song you transcribed yourself but must **not** publish — e.g. a modern copyrighted track — put a chart file in `songs-private/` (see [songs-private/README.md](songs-private/README.md) and the template `_example.json.template`). It appears on the menu with a **PRIVATE** badge, **only when you run `npm run dev` on your own computer**:
+
+- `songs-private/*.json` and `public/private-songs/` are git-ignored, so they can't be committed.
+- The loader runs in development only; `npm run build` (prebuild hook) deletes the synced copy, so the production build, CI and the GitHub Pages export neither contain nor try to load private charts (checked: no match in `.next` or `out`).
+- A chart with an empty `melody` is shown as a disabled slot (this is how the `NO BATIDÃO` slot ships on the author's machine — **its notes are not included anywhere in this repository**; the song is under copyright and needs the rights holders' permission before it could be published).
+- Notes can be written with `E4:2` (lane picked automatically: the song's distinct pitches are spread evenly over the four keys) or `E4:2:3` (forced lane); chords `C4+E4+G4:4`; rests `R:2`. Mistakes in a chart are listed in a yellow box on the menu instead of crashing.
 
 ## Test results
 
@@ -148,8 +166,8 @@ Debussy's *Clair de lune* (public-domain composition) is still a "Coming Soon" c
 |---|---|
 | `npm run typecheck` | pass |
 | `npm run build` | pass |
-| `npm test` (116 unit tests: judging windows, wrong-note mapping, no auto-correction, misses are silent, chords, holds, full-song simulations for every song — perfect / all-wrong / silent —, clock pause/resume, key-repeat, simultaneous keys, stats, chart integrity and Canon-specific checks) | 116 / 116 pass |
-| `npm run test:e2e` (real Chrome, 44 checks) | 44 / 44 pass |
+| `npm test` (142 unit tests: judging windows, wrong-note mapping, no auto-correction, misses are silent, chords, holds, full-song simulations for every song — perfect / all-wrong / silent —, clock pause/resume, key-repeat, simultaneous keys, stats, chart integrity and Canon-specific checks) | 142 / 142 pass |
+| `npm run test:e2e` (real Chrome, 45 checks) | 45 / 45 pass |
 | `npm run test:e2e:mobile` (emulated iPhone 13, portrait + landscape, real CDP touch incl. two fingers at once: layout, touch hit with correct pitch, multi-touch, pause/resume by tap, results screen) | 28 / 28 pass |
 
 What the E2E run verifies in a real browser: menu renders; `AudioContext` is running after Start; countdown; Space/Esc pause freezes song time (±1 ms) and resume continues from the same position; `R` asks for confirmation, Esc cancels, Enter restarts with a cleared log; key auto-repeat produces one input; **measured on the synth output with an `AnalyserNode`: the correct key makes E5 (659 Hz) the loudest pitch, the wrong key makes D♯5 sound while E5 stays absent afterwards, and an unplayed note is silent**; a scripted autopilot plays the whole song with deliberate wrong keys and skipped notes (game keeps running, counts match the plan, mean input error 6 ms), the results screen and log appear, replay starts, Play Again works, reload returns to a working menu; no console errors.
@@ -166,7 +184,7 @@ What the E2E run verifies in a real browser: menu renders; `AudioContext` is run
 ## Not implemented / known limitations
 
 - Chart not proof-read against an Urtext; only an excerpt of the piece; tempo slowed.
-- Six playable songs, all excerpts/themes; Clair de Lune is still "Coming Soon" (see above).
+- Seven playable songs: five excerpts/themes of public-domain pieces, one complete original; Clair de Lune is still "Coming Soon" (see above).
 - Piano is synthesized, not sampled; no sustain pedal, no velocity layers.
 - A Hold that is still held when you pause is treated as released at the pause position.
 - Keys pressed when nothing is due (including during the lead-in before the first tile) count as stray Wrong Notes by design.

@@ -4,6 +4,7 @@ import { moonlightSonata } from "@/songs/moonlightSonata";
 import { odeToJoy } from "@/songs/odeToJoy";
 import { twinkleTwinkle } from "@/songs/twinkleTwinkle";
 import { jingleBells } from "@/songs/jingleBells";
+import { midnightGroove } from "@/songs/midnightGroove";
 import { furElise } from "@/songs/furElise";
 import { SONGS } from "@/songs";
 import { buildLaneSounds, buildSong, pitchFromName, pitchName, timeSong } from "@/songs/builder";
@@ -92,8 +93,14 @@ describe.each(SONGS.map((song) => [song.title, song] as const))("chart integrity
 
   it("has Hold tiles consistent with the chart, and is honest about its provenance", () => {
     for (const n of notes) expect(n.hold).toBe(n.type === "hold" || (n.type === "chord" && n.hold));
-    expect(song.coverage.toLowerCase()).toContain("not the complete piece");
-    expect(song.source.toLowerCase()).toContain("hand transcription");
+    if (song.original) {
+      // an original composition must say so, and must not claim to transcribe anything
+      expect(song.source.toLowerCase()).toContain("original composition");
+      expect(song.source.toLowerCase()).not.toContain("transcription");
+    } else {
+      expect(song.coverage.toLowerCase()).toContain("not the complete piece");
+      expect(song.source.toLowerCase()).toContain("hand transcription");
+    }
   });
 });
 
@@ -260,6 +267,55 @@ describe("Jingle Bells chart", () => {
     expect(chord.map((n) => pitchName(n.pitch)).sort()).toEqual(["C4", "E4", "G4"]);
     expect(jingleBells.melody.length).toBe(52 + 3);
     expectFixedPitchLanes(jingleBells);
+  });
+});
+
+describe("Midnight Groove (original)", () => {
+  const notes = midnightGroove.melody;
+  const SIXTEENTH = 0.25;
+
+  it("is flagged as an original composition", () => {
+    expect(midnightGroove.original).toBe(true);
+    expect(midnightGroove.composer.toLowerCase()).toContain("original");
+  });
+
+  it("bar 1 is the 3-3-2 tresillo: hits on beat 1, the 'and' of 2 and beat 4", () => {
+    const bar1 = notes.filter((n) => n.startBeat < 4);
+    expect(bar1.map((n) => n.startBeat)).toEqual([0, 6 * SIXTEENTH, 12 * SIXTEENTH]);
+    expect(bar1.map((n) => pitchName(n.pitch))).toEqual(["A4", "C5", "A4"]);
+  });
+
+  it("the hook keeps the 3-3-2 rhythm in bars 1-4 and again in bars 9-12 (first three bars of each)", () => {
+    for (const bar of [0, 1, 2, 3, 8, 9, 10]) {
+      const hits = notes.filter((n) => n.startBeat >= bar * 4 && n.startBeat < (bar + 1) * 4).map((n) => n.startBeat - bar * 4);
+      expect(hits).toEqual([0, 1.5, 3]);
+    }
+  });
+
+  it("uses only six pitches in A Phrygian, with automatic lanes that never put a pitch on two keys", () => {
+    const solo = notes.filter((n) => n.chordGroup === null);
+    expect(new Set(solo.map((n) => pitchName(n.pitch)))).toEqual(new Set(["A4", "A#4", "C5", "D5", "E5", "G5"])); // A#4 = B♭4
+    const lane = new Map<number, number>();
+    for (const n of solo) {
+      expect(lane.get(n.pitch) ?? n.lane).toBe(n.lane);
+      lane.set(n.pitch, n.lane);
+    }
+    expect([...new Set(notes.map((n) => n.lane))].sort()).toEqual([0, 1, 2, 3]);
+  });
+
+  it("has two-key chord stabs in bars 13-14 and ends on a held three-key A minor chord", () => {
+    const stabs = notes.filter((n) => n.chordGroup !== null && n.startBeat >= 48 && n.startBeat < 56);
+    expect(stabs.length).toBe(12);
+    const last = notes.filter((n) => n.startBeat >= 60);
+    expect(last.map((n) => pitchName(n.pitch)).sort()).toEqual(["A4", "C5", "E5"]);
+    expect(last.every((n) => n.hold && n.durationBeats === 4)).toBe(true);
+    expect(notes.filter((n) => n.startBeat < 60).some((n) => n.hold)).toBe(false);
+  });
+
+  it("bass plays root, root, fifth on the same 3-3-2 hits and stays below the melody", () => {
+    const bar1 = midnightGroove.accompaniment.filter((a) => a.startBeat < 4).map((a) => [pitchName(a.pitch), a.startBeat]);
+    expect(bar1).toEqual([["A2", 0], ["A2", 1.5], ["E3", 3]]);
+    expect(Math.max(...midnightGroove.accompaniment.map((a) => a.pitch))).toBeLessThan(Math.min(...notes.map((n) => n.pitch)));
   });
 });
 

@@ -4,14 +4,17 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "predev": "node scripts/sync-private-songs.mjs",
     "dev": "next dev",
+    "prebuild": "node scripts/sync-private-songs.mjs --clean",
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "verify": "npm run typecheck && npm test && npm run build",
     "test": "vitest run",
     "test:e2e": "node e2e/run.mjs",
-    "test:e2e:mobile": "node e2e/mobile.mjs"
+    "test:e2e:mobile": "node e2e/mobile.mjs",
+    "songs:sync": "node scripts/sync-private-songs.mjs"
   },
   "dependencies": {
     "next": "^16.4.4",

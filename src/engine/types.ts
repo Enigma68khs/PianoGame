@@ -44,6 +44,8 @@ export interface SongData {
   /** Honest provenance / completeness statement shown in README + UI. */
   source: string;
   coverage: string;
+  /** True for a composition written for this project (not a transcription of an existing piece). */
+  original?: boolean;
 }
 
 /** A note with times resolved to seconds for a given difficulty. */

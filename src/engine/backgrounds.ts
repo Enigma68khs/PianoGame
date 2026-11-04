@@ -686,6 +686,137 @@ function snowyNight(): Background {
   };
 }
 
+
+/**
+ * "Neon night" — for Midnight Groove: a synthwave city night. A striped neon sun sinks behind a skyline, a
+ * perspective grid races toward the horizon and speaker-style equalizer bars on both sides jump with the beat.
+ */
+function neonNight(): Background {
+  const rnd = seeded(8080);
+  const eq = Array.from({ length: 16 }, () => ({ ph: rnd() * 6.28, sp: 1.4 + rnd() * 2.4, base: 0.22 + rnd() * 0.3 }));
+  const towers = Array.from({ length: 34 }, (_, i) => ({ x: i / 34, w: 0.02 + rnd() * 0.028, h: 0.03 + rnd() * 0.11, lit: rnd() }));
+  const notes = Array.from({ length: 9 }, (_, i) => ({
+    side: i % 2, u: rnd(), off: rnd(), speed: 0.025 + rnd() * 0.03, glyph: GLYPHS[i % 4], size: 22 + rnd() * 20, sway: rnd() * 6.28, color: LANE_COLORS[i % 4],
+  }));
+  return {
+    draw(ctx, L, s) {
+      const { W, H, fieldX, fieldW } = L;
+      const { now, beat, energy } = s;
+      const rightX = fieldX + fieldW;
+      const horizon = H * 0.6;
+
+      const sky = ctx.createLinearGradient(0, 0, 0, horizon);
+      sky.addColorStop(0, "#06010e");
+      sky.addColorStop(0.55, "#1a0430");
+      sky.addColorStop(1, "#5d0e57");
+      ctx.fillStyle = sky;
+      ctx.fillRect(0, 0, W, horizon);
+
+      // striped sun
+      const sr = Math.min(W, H) * 0.19;
+      const sx = W - rightX > 150 ? rightX + (W - rightX) / 2 : W * 0.5;
+      const sy = horizon - sr * 0.55;
+      const glow = ctx.createRadialGradient(sx, sy, sr * 0.5, sx, sy, sr * (2.2 + 0.5 * beat + 0.4 * energy));
+      glow.addColorStop(0, `rgba(255,60,160,${0.38 + 0.2 * beat})`);
+      glow.addColorStop(1, "rgba(255,60,160,0)");
+      ctx.fillStyle = glow;
+      ctx.fillRect(sx - sr * 3, sy - sr * 3, sr * 6, sr * 6);
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(sx, sy, sr, 0, 6.2832);
+      ctx.clip();
+      const disc = ctx.createLinearGradient(0, sy - sr, 0, sy + sr);
+      disc.addColorStop(0, "#ffe94a");
+      disc.addColorStop(0.55, "#ff6a3d");
+      disc.addColorStop(1, "#ff1f8f");
+      ctx.fillStyle = disc;
+      ctx.fillRect(sx - sr, sy - sr, sr * 2, sr * 2);
+      ctx.fillStyle = "#1c0433"; // slits in the lower half
+      for (let i = 0; i < 7; i++) {
+        const y = sy + sr * (0.05 + i * 0.14);
+        ctx.fillRect(sx - sr, y, sr * 2, 1.5 + i * 1.6);
+      }
+      ctx.restore();
+
+      // skyline
+      for (const t of towers) {
+        const bh = t.h * H;
+        ctx.fillStyle = "#0b0219";
+        ctx.fillRect(t.x * W, horizon - bh, t.w * W, bh);
+        if (t.lit > 0.35) {
+          ctx.fillStyle = t.lit > 0.7 ? `rgba(0,255,230,${0.45 + 0.4 * beat})` : `rgba(255,70,190,${0.4 + 0.4 * beat})`;
+          for (let y = horizon - bh + 6; y < horizon - 4; y += 11) ctx.fillRect(t.x * W + 3, y, Math.max(2, t.w * W - 6), 2);
+        }
+      }
+
+      // floor + perspective grid
+      const floor = ctx.createLinearGradient(0, horizon, 0, H);
+      floor.addColorStop(0, "#21053b");
+      floor.addColorStop(1, "#08010f");
+      ctx.fillStyle = floor;
+      ctx.fillRect(0, horizon, W, H - horizon);
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = `rgba(255,70,200,${0.45 + 0.4 * beat + 0.15 * energy})`;
+      for (let i = -14; i <= 14; i++) {
+        ctx.beginPath();
+        ctx.moveTo(W / 2 + i * (W / 90), horizon);
+        ctx.lineTo(W / 2 + i * (W / 9), H);
+        ctx.stroke();
+      }
+      ctx.strokeStyle = `rgba(0,240,255,${0.38 + 0.3 * beat})`;
+      const slide = (now * 0.5) % 1;
+      for (let k = 0; k < 11; k++) {
+        const t = (k + slide) / 11;
+        const y = horizon + (H - horizon) * t * t;
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(W, y);
+        ctx.stroke();
+      }
+      ctx.fillStyle = "rgba(255,70,200,0.5)";
+      ctx.fillRect(0, horizon - 1, W, 2);
+
+      // equalizer bars beside the lanes
+      const sides: [number, number][] = [];
+      if (fieldX > 110) sides.push([8, fieldX - 8]);
+      if (W - rightX > 110) sides.push([rightX + 8, W - 8]);
+      for (const [x0, x1] of sides) {
+        const n = 8;
+        const bw = (x1 - x0) / n;
+        for (let i = 0; i < n; i++) {
+          const e = eq[(i + (x0 > fieldX ? 8 : 0)) % eq.length];
+          const lvl = Math.min(1, e.base + 0.28 * Math.sin(now * e.sp + e.ph) + 0.3 * beat + 0.25 * energy);
+          const h = Math.max(6, lvl * H * 0.42);
+          const g = ctx.createLinearGradient(0, H - h, 0, H);
+          g.addColorStop(0, "#00f0ff");
+          g.addColorStop(1, "#ff2fa0");
+          ctx.fillStyle = g;
+          ctx.globalAlpha = 0.85;
+          ctx.fillRect(x0 + i * bw + 2, H - h, bw - 4, h);
+        }
+      }
+      ctx.globalAlpha = 1;
+
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      for (const n of notes) {
+        const prog = (((n.off + now * n.speed) % 1) + 1) % 1;
+        const lo = n.side === 0 ? 0 : rightX;
+        const hi = n.side === 0 ? fieldX : W;
+        const range = hi - lo;
+        const x = range > 80 ? lo + range * (0.15 + 0.7 * n.u) : W * (n.side === 0 ? 0.08 : 0.92);
+        ctx.globalAlpha = Math.sin(prog * Math.PI) * (0.5 + 0.3 * energy + 0.25 * beat);
+        ctx.fillStyle = rgba(n.color, 1);
+        ctx.font = `${n.size * (1 + 0.12 * beat)}px ${GLYPH_FONT}`;
+        ctx.fillText(n.glyph, x + Math.sin(now * 0.8 + n.sway) * 14, H * (1.02 - prog * 1.1));
+      }
+      ctx.globalAlpha = 1;
+      ctx.textAlign = "start";
+      ctx.textBaseline = "alphabetic";
+    },
+  };
+}
+
 const THEMES: Record<string, () => Background> = {
   "fur-elise": () => moonlitHall("moon"),
   "canon-in-d": () => moonlitHall("dawn"),
@@ -693,9 +824,28 @@ const THEMES: Record<string, () => Background> = {
   "ode-to-joy": () => moonlitHall("dawn"),
   "twinkle-twinkle": starryNight,
   "jingle-bells": snowyNight,
+  "midnight-groove": neonNight,
 };
+
+/** Scenes a local-only song can choose by name (`"theme"` in its chart file). */
+const THEME_BY_NAME: Record<string, () => Background> = {
+  moon: () => moonlitHall("moon"),
+  dawn: () => moonlitHall("dawn"),
+  lake: moonlitLake,
+  stars: starryNight,
+  snow: snowyNight,
+  neon: neonNight,
+};
+const CUSTOM_THEMES = new Map<string, string>();
+
+/** Pick one of the built-in scenes for a song id (used by local-only songs). */
+export function registerSongTheme(songId: string, themeName: string) {
+  if (THEME_BY_NAME[themeName]) CUSTOM_THEMES.set(songId, themeName);
+}
 
 /** Background for a song; unknown songs fall back to the moonlit hall. */
 export function createBackground(songId: string): Background {
+  const named = CUSTOM_THEMES.get(songId);
+  if (named) return THEME_BY_NAME[named]();
   return (THEMES[songId] ?? THEMES["fur-elise"])();
 }

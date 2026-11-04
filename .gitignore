@@ -5,3 +5,9 @@ out
 next-env.d.ts
 e2e/shots
 node_modules
+
+# local-only songs: never commit or deploy them (see songs-private/README.md)
+songs-private/*
+!songs-private/README.md
+!songs-private/_example.json.template
+public/private-songs/

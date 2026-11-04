@@ -53,15 +53,46 @@ export interface ChartDef {
    *   "E5:2:3"        pitch : length(units) : lane(0-3)
    *   "A4+E5:6:1+3"   chord: pitches and lanes joined with '+'
    *   "R:2"           rest of 2 units
+   *   "E5:2"          lane omitted → assigned automatically from the pitch (see autoLaneTable)
    */
   melody: string[];
   /** Accompaniment tokens: "A2@3:1" = pitch @ startUnit : length(units). Start is absolute (units). */
   accompaniment: string[];
   source: string;
   coverage: string;
+  /** An original composition for this project rather than a transcription. */
+  original?: boolean;
+}
+
+/**
+ * Automatic lane table for tokens that omit the lane: the song's distinct pitches, sorted, are spread evenly over
+ * the four lanes (lowest → lane 0, highest → lane 3). A pitch always lands on the same lane and a higher pitch
+ * never lands on a lower one.
+ */
+export function autoLaneTable(pitches: number[]): Map<number, number> {
+  const unique = [...new Set(pitches)].sort((a, b) => a - b);
+  const table = new Map<number, number>();
+  unique.forEach((p, i) => table.set(p, unique.length === 1 ? 1 : Math.round((i * (LANE_COUNT - 1)) / (unique.length - 1))));
+  return table;
+}
+
+/** Chord members need distinct lanes: keep them ascending with pitch, pushing apart where the table collides. */
+function spreadChordLanes(sortedLanes: number[]): number[] {
+  const out = [...sortedLanes];
+  for (let i = 1; i < out.length; i++) out[i] = Math.max(out[i], out[i - 1] + 1);
+  for (let i = out.length - 1; i >= 0; i--) out[i] = Math.min(out[i], LANE_COUNT - (out.length - i));
+  return out;
 }
 
 export function buildSong(def: ChartDef): SongData {
+  // pass 1: pitches of every note whose lane is not given explicitly
+  const autoPitches: number[] = [];
+  for (const token of def.melody) {
+    const parts = token.split(":");
+    if (parts[0] !== "R" && parts.length < 3) parts[0].split("+").forEach((n) => autoPitches.push(pitchFromName(n)));
+  }
+  const autoLanes = autoLaneTable(autoPitches);
+
   const melody: SongNote[] = [];
   let cursor = 0;
   let id = 0;
@@ -75,8 +106,21 @@ export function buildSong(def: ChartDef): SongData {
     }
     const pitches = parts[0].split("+").map(pitchFromName);
     const length = Number(parts[1]);
-    const lanes = parts[2].split("+").map(Number);
+    if (!(length > 0)) throw new Error(`Bad note length in ${token}`);
+    let lanes: number[];
+    if (parts.length >= 3) {
+      lanes = parts[2].split("+").map(Number);
+    } else if (pitches.length === 1) {
+      lanes = [autoLanes.get(pitches[0])!];
+    } else {
+      // automatic chord lanes, assigned in ascending pitch order, then mapped back to the written order
+      const order = pitches.map((p, i) => [p, i] as const).sort((a, b) => a[0] - b[0]);
+      const spread = spreadChordLanes(order.map(([p]) => autoLanes.get(p)!));
+      lanes = new Array(pitches.length);
+      order.forEach(([, i], k) => (lanes[i] = spread[k]));
+    }
     if (pitches.length !== lanes.length) throw new Error(`Token pitch/lane mismatch: ${token}`);
+    if (pitches.length > LANE_COUNT) throw new Error(`A chord can have at most ${LANE_COUNT} notes: ${token}`);
     const isChord = pitches.length > 1;
     const group = isChord ? ++chordGroup : null;
     const durationBeats = length * def.unit;
@@ -122,6 +166,7 @@ export function buildSong(def: ChartDef): SongData {
     accompaniment,
     source: def.source,
     coverage: def.coverage,
+    original: def.original,
   };
 }
 
